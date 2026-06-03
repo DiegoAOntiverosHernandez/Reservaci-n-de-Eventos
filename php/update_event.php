@@ -21,12 +21,16 @@ if (!$data) {
 
 $event_id = (int)($data['event_id'] ?? 0);
 $nombre = trim($data['nombre'] ?? '');
-$categoria = $data['categoria'] ?? ''; // Puede ser ID entero o nombre de la categoría
+$categoria = trim($data['categoria'] ?? '');
 $descripcion = trim($data['descripcion'] ?? '');
 $fecha = trim($data['fecha'] ?? '');
 $hora_inicio = trim($data['hora_inicio'] ?? '');
+$hora_cierre_req = trim($data['hora_cierre'] ?? '');
 $capacidad = (int)($data['capacidad'] ?? 0);
+$ubicacion = trim($data['ubicacion'] ?? 'Recinto Principal Ágora');
 $estado = trim($data['estado'] ?? 'activo');
+$itinerario = $data['itinerario'] ?? [];
+$imagen_base64 = $data['imagen_base64'] ?? null;
 $id_organizador = getCurrentUserId();
 
 // Validaciones básicas
@@ -40,6 +44,11 @@ if (strlen($nombre) < 5 || strlen($nombre) > 33) {
     exit;
 }
 
+if (empty($categoria)) {
+    echo json_encode(['success' => false, 'message' => 'La categoría es obligatoria.']);
+    exit;
+}
+
 if (empty($fecha)) {
     echo json_encode(['success' => false, 'message' => 'La fecha del evento es obligatoria.']);
     exit;
@@ -50,8 +59,13 @@ if (empty($hora_inicio)) {
     exit;
 }
 
-if ($capacidad <= 0 || $capacidad > 30) {
-    echo json_encode(['success' => false, 'message' => 'La capacidad debe ser un número entre 1 y 30.']);
+if ($capacidad <= 0 || $capacidad > 500) {
+    echo json_encode(['success' => false, 'message' => 'La capacidad debe ser un número entre 1 y 500.']);
+    exit;
+}
+
+if (empty($ubicacion)) {
+    echo json_encode(['success' => false, 'message' => 'La ubicación del evento es obligatoria.']);
     exit;
 }
 
@@ -71,75 +85,181 @@ try {
         exit;
     }
 
-    // 2. Resolver Categoria (si es entero, usar directamente; si es cadena, buscar o crear)
-    $id_categoria = null;
-    if (is_numeric($categoria)) {
-        $id_categoria = (int)$categoria;
+    // 2. Mapear categoría a base de datos
+    $catName = '';
+    $lowerCat = strtolower($categoria);
+    if (strpos($lowerCat, 'concierto') !== false) {
+        $catName = 'Concierto';
+    } elseif (strpos($lowerCat, 'teatro') !== false || strpos($lowerCat, 'obra') !== false || strpos($lowerCat, 'arte') !== false) {
+        $catName = 'Obra de teatro';
+    } elseif (strpos($lowerCat, 'conferencia') !== false) {
+        $catName = 'Conferencia';
+    } elseif (strpos($lowerCat, 'festival') !== false) {
+        $catName = 'Festival';
+    } elseif (strpos($lowerCat, 'social') !== false || strpos($lowerCat, 'boda') !== false || strpos($lowerCat, 'salon') !== false || strpos($lowerCat, 'salón') !== false) {
+        $catName = 'Evento social';
+    } elseif (strpos($lowerCat, 'deporte') !== false || strpos($lowerCat, 'deportivo') !== false) {
+        $catName = 'Evento deportivo';
     } else {
-        $catName = ucfirst(strtolower(trim($categoria)));
-        if ($catName === 'Deporte') {
-            $catName = 'Evento deportivo';
-        } elseif ($catName === 'Arte') {
-            $catName = 'Obra de teatro';
-        } elseif ($catName === 'Boda' || $catName === 'Salon' || $catName === 'Salón') {
-            $catName = 'Evento social';
-        }
+        $catName = ucfirst($lowerCat);
+    }
 
-        $stmt = $pdo->prepare("SELECT id_categoria FROM Categoria WHERE nombre_categoria = ?");
+    $stmt = $pdo->prepare("SELECT id_categoria FROM Categoria WHERE nombre_categoria = ?");
+    $stmt->execute([$catName]);
+    $row = $stmt->fetch();
+    if ($row) {
+        $id_categoria = $row['id_categoria'];
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO Categoria (nombre_categoria) VALUES (?)");
         $stmt->execute([$catName]);
-        $row = $stmt->fetch();
-        if ($row) {
-            $id_categoria = $row['id_categoria'];
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO Categoria (nombre_categoria) VALUES (?)");
-            $stmt->execute([$catName]);
-            $id_categoria = $pdo->lastInsertId();
+        $id_categoria = $pdo->lastInsertId();
+    }
+
+    // Asignar Recinto dinámicamente según la categoría
+    $id_recinto = 4; // Plaza Pública (General) por defecto
+    $lowerCat = strtolower($categoria);
+    if (strpos($lowerCat, 'concierto') !== false || strpos($lowerCat, 'deporte') !== false || strpos($lowerCat, 'deportivo') !== false) {
+        $id_recinto = 2; // Estadio Olímpico Ágora (estadio)
+    } elseif (strpos($lowerCat, 'teatro') !== false || strpos($lowerCat, 'obra') !== false || strpos($lowerCat, 'arte') !== false) {
+        $id_recinto = 1; // Teatro Ágora Principal (teatro)
+    } elseif (strpos($lowerCat, 'conferencia') !== false) {
+        $id_recinto = 3; // Sala de Conferencias Ágora (conferencia)
+    }
+
+    // Calcular hora de cierre
+    if (!empty($hora_cierre_req)) {
+        $hora_cierre = $hora_cierre_req;
+    } else {
+        $time = strtotime($hora_inicio);
+        $hora_cierre = date('H:i:s', $time + 3 * 3600);
+    }
+
+    // Si hay una imagen en base64 cargada, la guardamos
+    $imagen_banner = null;
+    if (!empty($imagen_base64) && strpos($imagen_base64, 'data:image') === 0) {
+        try {
+            $parts = explode(',', $imagen_base64);
+            $imgData = base64_decode($parts[1]);
+            $uploadDir = __DIR__ . '/../Assets/img/uploads/';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            $fileName = 'event_' . uniqid() . '.png';
+            file_put_contents($uploadDir . $fileName, $imgData);
+            $imagen_banner = 'Assets/img/uploads/' . $fileName;
+        } catch (\Exception $exImg) {
+            // Ignorar
         }
     }
 
-    // Calcular hora de cierre (por defecto 3 horas después del inicio)
-    $time = strtotime($hora_inicio);
-    $hora_cierre = date('H:i:s', $time + 3 * 3600);
-
-    // Iniciar transacción
+    // Iniciar transacción de base de datos
     $pdo->beginTransaction();
 
-    // 3. Actualizar Evento
-    $stmt = $pdo->prepare("UPDATE Evento SET nombre_evento = ?, descripcion = ?, id_categoria = ?, fecha = ?, hora_inicio = ?, hora_cierre = ?, estado = ? WHERE id_evento = ?");
-    $stmt->execute([
-        $nombre,
-        $descripcion,
-        $id_categoria,
-        $fecha,
-        $hora_inicio,
-        $hora_cierre,
-        $estado,
-        $event_id
-    ]);
+    // 3. Actualizar el Evento
+    $sql = "UPDATE Evento SET nombre_evento = ?, descripcion = ?, id_categoria = ?, id_recinto = ?, fecha = ?, hora_inicio = ?, hora_cierre = ?, estado = ?, ubicacion = ?";
+    $params = [$nombre, $descripcion, $id_categoria, $id_recinto, $fecha, $hora_inicio, $hora_cierre, $estado, $ubicacion];
+    
+    if ($imagen_banner !== null) {
+        $sql .= ", imagen_banner = ?";
+        $params[] = $imagen_banner;
+    }
+    
+    $sql .= " WHERE id_evento = ?";
+    $params[] = $event_id;
 
-    // 4. Actualizar la capacidad en Zona_Boleto (General)
-    // Buscamos cuántos lugares totales había antes para calcular el cambio
-    $stmt = $pdo->prepare("SELECT id_zona, lugares_totales, lugares_disponibles FROM Zona_Boleto WHERE id_evento = ? AND nombre_zona = 'General'");
-    $stmt->execute([$event_id]);
-    $zona = $stmt->fetch();
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
 
-    if ($zona) {
-        $oldTotales = (int)$zona['lugares_totales'];
-        $oldDisponibles = (int)$zona['lugares_disponibles'];
-        $diferencia = $capacidad - $oldTotales;
-        
-        $newDisponibles = $oldDisponibles + $diferencia;
-        if ($newDisponibles < 0) {
-            $newDisponibles = 0; // Evitar que sea menor a cero
+    // 4. Actualizar secciones de itinerario (eliminar anteriores e insertar las nuevas)
+    $stmtDelIt = $pdo->prepare("DELETE FROM Itinerario WHERE id_evento = ?");
+    $stmtDelIt->execute([$event_id]);
+
+    if (!empty($itinerario) && is_array($itinerario)) {
+        $stmtIt = $pdo->prepare("INSERT INTO Itinerario (id_evento, nombre_seccion, descripcion_seccion, hora_inicio, hora_fin) VALUES (?, ?, 'Sección de cronograma', ?, ?)");
+        foreach ($itinerario as $sec) {
+            $nombreSec = trim($sec['nombre'] ?? '');
+            $horaSec = trim($sec['hora'] ?? '');
+            if (!empty($nombreSec) && !empty($horaSec)) {
+                $timeSec = strtotime($horaSec);
+                $horaFinSec = date('H:i:s', $timeSec + 3600);
+                $stmtIt->execute([$event_id, $nombreSec, $horaSec, $horaFinSec]);
+            }
+        }
+    }
+
+    // 5. Actualizar la capacidad en Zona_Boleto
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM Zona_Boleto WHERE id_evento = ? AND nombre_zona IN ('VIP', 'Zona A', 'Zona B', 'Zona C', 'Zona D')");
+    $stmtCheck->execute([$event_id]);
+    $hasZones = ((int)$stmtCheck->fetchColumn() > 0);
+
+    if ($hasZones) {
+        // Redistribuir la nueva capacidad de forma proporcional entre las 5 zonas
+        $seatsVIP = max(1, (int)round($capacidad * 0.15));
+        $seatsA = max(1, (int)round($capacidad * 0.20));
+        $seatsB = max(1, (int)round($capacidad * 0.30));
+        $seatsC = max(1, (int)round($capacidad * 0.20));
+        $seatsD = $capacidad - ($seatsVIP + $seatsA + $seatsB + $seatsC);
+        if ($seatsD <= 0) {
+            $seatsD = 1;
         }
 
-        $stmt = $pdo->prepare("UPDATE Zona_Boleto SET lugares_totales = ?, lugares_disponibles = ? WHERE id_zona = ?");
-        $stmt->execute([$capacidad, $newDisponibles, $zona['id_zona']]);
+        $newSeats = [
+            'VIP' => $seatsVIP,
+            'Zona A' => $seatsA,
+            'Zona B' => $seatsB,
+            'Zona C' => $seatsC,
+            'Zona D' => $seatsD
+        ];
+
+        // Actualizar cada zona manteniendo el precio anterior
+        foreach ($newSeats as $zName => $zTotales) {
+            // Buscamos la zona para calcular la diferencia de disponibles
+            $stmt = $pdo->prepare("SELECT id_zona, lugares_totales, lugares_disponibles FROM Zona_Boleto WHERE id_evento = ? AND nombre_zona = ? LIMIT 1");
+            $stmt->execute([$event_id, $zName]);
+            $zona = $stmt->fetch();
+
+            if ($zona) {
+                $oldTotales = (int)$zona['lugares_totales'];
+                $oldDisponibles = (int)$zona['lugares_disponibles'];
+                $diferencia = $zTotales - $oldTotales;
+                $newDisponibles = max(0, $oldDisponibles + $diferencia);
+
+                $stmtUp = $pdo->prepare("UPDATE Zona_Boleto SET lugares_totales = ?, lugares_disponibles = ? WHERE id_zona = ?");
+                $stmtUp->execute([$zTotales, $newDisponibles, $zona['id_zona']]);
+            } else {
+                $stmtIn = $pdo->prepare("INSERT INTO Zona_Boleto (id_evento, nombre_zona, precio, lugares_totales, lugares_disponibles) VALUES (?, ?, 0.00, ?, ?)");
+                $stmtIn->execute([$event_id, $zName, $zTotales, $zTotales]);
+            }
+        }
     } else {
-        // Por si acaso no existe, crear la zona General
-        $stmt = $pdo->prepare("INSERT INTO Zona_Boleto (id_evento, nombre_zona, precio, lugares_totales, lugares_disponibles) VALUES (?, 'General', 0.00, ?, ?)");
-        $stmt->execute([$event_id, $capacidad, $capacidad]);
+        // Si no tiene las 5 zonas, actualizar o crear la zona General
+        $stmt = $pdo->prepare("SELECT id_zona, lugares_totales, lugares_disponibles FROM Zona_Boleto WHERE id_evento = ? AND nombre_zona = 'General'");
+        $stmt->execute([$event_id]);
+        $zona = $stmt->fetch();
+
+        if ($zona) {
+            $oldTotales = (int)$zona['lugares_totales'];
+            $oldDisponibles = (int)$zona['lugares_disponibles'];
+            $diferencia = $capacidad - $oldTotales;
+            
+            $newDisponibles = max(0, $oldDisponibles + $diferencia);
+
+            $stmt = $pdo->prepare("UPDATE Zona_Boleto SET lugares_totales = ?, lugares_disponibles = ? WHERE id_zona = ?");
+            $stmt->execute([$capacidad, $newDisponibles, $zona['id_zona']]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO Zona_Boleto (id_evento, nombre_zona, precio, lugares_totales, lugares_disponibles) VALUES (?, 'General', 0.00, ?, ?)");
+            $stmt->execute([$event_id, $capacidad, $capacidad]);
+        }
     }
+
+    // Lógica Manual de Trigger:
+    // Calcular el total de asientos en las zonas de este evento y actualizar capacidad_total en Evento
+    $stmtSum = $pdo->prepare("SELECT SUM(lugares_totales) FROM Zona_Boleto WHERE id_evento = ?");
+    $stmtSum->execute([$event_id]);
+    $total_cap = (int)$stmtSum->fetchColumn();
+
+    $stmtUpdateCap = $pdo->prepare("UPDATE Evento SET capacidad_total = ? WHERE id_evento = ?");
+    $stmtUpdateCap->execute([$total_cap, $event_id]);
 
     $pdo->commit();
 

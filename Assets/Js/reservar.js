@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnReservar.disabled = (value === 0 || value > maxCapacity);
     });
     
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', (e) => {
         e.preventDefault();
         
         const espacios = parseInt(espaciosInput.value);
@@ -62,43 +62,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        btnReservar.disabled = true;
-        const originalText = btnReservar.textContent;
-        btnReservar.textContent = 'Procesando...';
-
-        const dataToSend = {
-            event_id: eventId,
-            espacios: espacios,
-            current_slots: currentSlots
-        };
-
-        try {
-            const response = await fetch('../php/make_reservation.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dataToSend)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
-            }
-
-            const result = await response.json();
-
-            if (result.success) {
-                alert('¡Éxito! ' + result.message);
-                window.location.href = 'historial_r.php'; 
-            } else {
-                alert('Fallo en la reserva: ' + result.message);
-            }
-
-        } catch (error) {
-            console.error('Error de red o servidor:', error);
-            alert('Hubo un error de conexión al procesar la reserva.');
-        } finally {
-            btnReservar.disabled = false;
-            btnReservar.textContent = originalText;
-        }
+        // Redirigir al flujo de confirmación de reserva
+        window.location.href = `confirmar_reserva.php?event_id=${eventId}&espacios=${espacios}&current_slots=${currentSlots}`;
     });
 
 });

@@ -55,8 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
             setError('hora', 'La hora de inicio es obligatoria.');
             hasError = true;
         }
-        if (isNaN(data.capacidad) || data.capacidad <= 0 || data.capacidad > 30) {
-            setError('capacidad', 'La capacidad debe ser un número entre 1 y 30.');
+        if (isNaN(data.capacidad) || data.capacidad <= 0 || data.capacidad > 500) {
+            setError('capacidad', 'La capacidad debe ser un número entre 1 y 500.');
             hasError = true;
         }
         

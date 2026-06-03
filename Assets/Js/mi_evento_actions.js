@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
 
-
-const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]');
+    // Toggle switch interactivo de estado de evento
+    const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]');
 
     toggles.forEach(toggle => {
         toggle.addEventListener('change', async function() {
@@ -10,7 +10,7 @@ const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]
             const newStatus = isChecked ? 'activo' : 'cancelado';
             
             const card = this.closest('.event-card');
-            const statusLabel = card.querySelector('.event-status-label');
+            const statusPill = card.querySelector('.event-status-pill');
             
             this.disabled = true;
 
@@ -27,10 +27,9 @@ const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]
                 const result = await response.json();
 
                 if (result.success) {
-                    if (statusLabel) {
-                        statusLabel.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-                        statusLabel.classList.remove('activo', 'cancelado', 'finalizado');
-                        statusLabel.classList.add(newStatus);
+                    if (statusPill) {
+                        statusPill.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                        statusPill.className = 'event-status-pill ' + newStatus;
                     }
                     card.setAttribute('data-estado', newStatus);
                     
@@ -49,7 +48,7 @@ const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]
         });
     });
 
-
+    // Menú de desplegable de Acciones
     document.querySelectorAll('.actions-dropdown').forEach(button => {
         button.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -71,6 +70,7 @@ const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]
         });
     });
 
+    // Acción para Eliminar Evento
     document.querySelectorAll('.action-delete').forEach(button => {
         button.addEventListener('click', async function(e) {
             e.preventDefault();
@@ -105,14 +105,45 @@ const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]
             }
         });
     });
-
-    document.querySelectorAll('.toggle-switch input').forEach(toggle => {
-        toggle.addEventListener('change', async function() {
-            const eventId = this.getAttribute('data-event-id');
-            const newState = this.checked ? 'activo' : 'cancelado'; 
-            
-            console.log(`Intentando cambiar evento ${eventId} a estado: ${newState}`);
-
-        });
-    });
 });
+
+// Filtros y búsquedas globales (disponibles en el objeto window)
+window.filterEvents = function() {
+    const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+    const categoryVal = document.getElementById('filterCategory').value;
+    const cards = document.querySelectorAll('.event-card');
+    
+    cards.forEach(card => {
+        const title = card.querySelector('.event-title').textContent.toLowerCase();
+        const category = card.getAttribute('data-category') || '';
+        
+        const matchesSearch = title.includes(searchVal);
+        const matchesCategory = (categoryVal === 'all' || category.includes(categoryVal.toLowerCase()));
+        
+        if (matchesSearch && matchesCategory) {
+            card.style.display = 'grid';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+};
+
+window.sortEvents = function() {
+    const sortVal = document.getElementById('sortDate').value;
+    const container = document.querySelector('.events-container');
+    const cards = Array.from(document.querySelectorAll('.event-card'));
+    
+    cards.sort((a, b) => {
+        const timeA = parseInt(a.getAttribute('data-timestamp'));
+        const timeB = parseInt(b.getAttribute('data-timestamp'));
+        
+        if (sortVal === 'recent') {
+            return timeB - timeA;
+        } else {
+            return timeA - timeB;
+        }
+    });
+    
+    // Volver a añadir las tarjetas ordenadas
+    cards.forEach(card => container.appendChild(card));
+};

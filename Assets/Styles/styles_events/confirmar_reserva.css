@@ -1,0 +1,179 @@
+body {
+    background-color: #f3f4f6;
+    font-family: 'Outfit', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Nav premium con estilo oscuro */
+.nav {
+    background-color: #1e293b;
+    padding: 20px 70px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.main-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.confirm-card {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 600px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    border: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+.confirm-card h1 {
+    font-size: 2.2rem;
+    color: #0f172a;
+    margin: 0 0 10px 0;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.confirm-card p.subtitle {
+    color: #64748b;
+    font-size: 1.05rem;
+    margin: 0 0 35px 0;
+    font-weight: 400;
+}
+
+/* Tarjeta azul oscuro de detalles */
+.details-blue-card {
+    background-color: #404a6e;
+    border-radius: 14px;
+    padding: 30px;
+    color: white;
+    text-align: left;
+    box-shadow: 0 8px 24px rgba(64, 74, 110, 0.15);
+    margin-bottom: 35px;
+}
+
+.details-blue-card h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0 0 25px 0;
+    letter-spacing: -0.3px;
+    color: #ffffff;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.detail-row:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.detail-label {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.detail-value {
+    font-weight: 600;
+    font-size: 0.98rem;
+    color: #ffffff;
+    text-align: right;
+    max-width: 60%;
+    word-wrap: break-word;
+}
+
+/* Fila de Total a Pagar */
+.total-row {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid rgba(255, 255, 255, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.total-label {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.total-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+/* Botones de acción */
+.button-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.btn-action {
+    padding: 15px 25px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Outfit', sans-serif;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-confirm {
+    background-color: #00b347;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 179, 71, 0.25);
+}
+
+.btn-confirm:hover {
+    background-color: #00993c;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 179, 71, 0.35);
+}
+
+.btn-cancel {
+    background-color: #ef4444;
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+}
+
+.btn-cancel:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+}
+
+@media (max-width: 600px) {
+    .nav {
+        padding: 15px 20px;
+    }
+    .confirm-card {
+        padding: 25px 20px;
+    }
+    .button-group {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .details-blue-card {
+        padding: 20px 15px;
+    }
+}

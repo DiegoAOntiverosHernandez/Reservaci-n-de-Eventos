@@ -9,15 +9,16 @@ $id_organizador = getCurrentUserId();
 // Obtener eventos del organizador
 try {
     $stmt = $pdo->prepare("
-        SELECT e.*, c.nombre_categoria,
-               COALESCE(SUM(CASE WHEN r.estado_reservacion = 'Confirmado' THEN r.espacios_reservados ELSE 0 END), 0) AS total_asistentes,
-               COALESCE(z.lugares_totales, e.capacidad_total) AS cap_total
+        SELECT e.*, c.nombre_categoria, rec.nombre_recinto,
+               (SELECT COALESCE(SUM(r.espacios_reservados), 0) 
+                FROM Reservacion r
+                WHERE r.id_zona IN (SELECT id_zona FROM Zona_Boleto WHERE id_evento = e.id_evento) 
+                  AND r.estado_reservacion = 'Confirmado') AS total_asistentes,
+               COALESCE((SELECT SUM(lugares_totales) FROM Zona_Boleto WHERE id_evento = e.id_evento), e.capacidad_total) AS cap_total
         FROM Evento e
         LEFT JOIN Categoria c ON e.id_categoria = c.id_categoria
-        LEFT JOIN Zona_Boleto z ON e.id_evento = z.id_evento
-        LEFT JOIN Reservacion r ON z.id_zona = r.id_zona
+        LEFT JOIN Recinto rec ON e.id_recinto = rec.id_recinto
         WHERE e.id_organizador = ?
-        GROUP BY e.id_evento
         ORDER BY e.fecha DESC, e.hora_inicio DESC
     ");
     $stmt->execute([$id_organizador]);
@@ -35,85 +36,11 @@ try {
     <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/home_welcom.css">
     <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/home_events.css">
     <link rel="stylesheet" type="text/css" href="../Assets/Styles/styles_events/events.css">
-    <link rel="stylesheet" type="text/css" href="../Assets/Styles/styles_events/mievent.css">
+    <link rel="stylesheet" type="text/css" href="../Assets/Styles/styles_events/mievent.css?v=<?php echo time(); ?>">
     <script src="../Assets/Js/home.js"></script>
     <script src="../Assets/Js/mi_evento_actions.js"></script>
     <title>Agora - Mis Eventos</title>
     <link rel="shortcut icon" href="../Assets/img/logo.png" type="image/x-icon">
-
-    <style>
-        .actions-dropdown-container {
-            position: relative;
-            display: inline-block;
-        }
-
-        .actions-dropdown-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            background-color: #f9f9f9;
-            min-width: 150px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 10;
-            border-radius: 6px;
-            padding: 5px 0;
-        }
-
-        .actions-dropdown-content a,
-        .actions-dropdown-content button {
-            color: #000;
-            padding: 10px 16px;
-            text-decoration: none;
-            display: block;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .actions-dropdown-content a:hover,
-        .actions-dropdown-content button:hover {
-            background-color: #ddd;
-        }
-
-        .actions-dropdown-content .action-delete {
-            color: #d32f2f;
-        }
-        .actions-dropdown-content .action-delete:hover {
-            background-color: #ffcdd2;
-        }
-        .actions-dropdown.active + .actions-dropdown-content {
-            display: block;
-        }
-        .empty-events-box {
-            text-align: center;
-            padding: 60px 20px;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            margin: 20px 0;
-        }
-        .empty-events-box p {
-            font-size: 1.2rem;
-            color: #666;
-            margin-bottom: 20px;
-        }
-        .empty-events-box a {
-            display: inline-block;
-            background: #4a5f8f;
-            color: #fff;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-        .empty-events-box a:hover {
-            background: #3e5178;
-        }
-    </style>
 </head>
 <body>
     <div class="nav">
@@ -152,10 +79,52 @@ try {
     
     <br>
     <div class="container">
-        <header class="page-header">
-            <h1>Mis eventos</h1>
-            <p class="subtitle">Gestiona y haz seguimiento de tus creaciones</p>
-        </header>
+        <!-- Premium Hero Banner -->
+        <div class="hero-container-mievent">
+            <div class="hero-text-mievent">
+                <h2>Tu escenario, tu evento.</h2>
+                <p>Encuentra, crea y gestiona eventos que inspiran.</p>
+                <a href="crear_evento.php" class="btn-create-mievent">Empieza a crear tu evento ahora</a>
+            </div>
+            <div class="hero-images-mievent">
+                <div class="hero-img-slide" style="background-image: url('../Assets/img/tag_concert.png');"></div>
+                <div class="hero-img-slide" style="background-image: url('../Assets/img/imgconferencia.jpg');"></div>
+            </div>
+        </div>
+
+        <!-- Filters & Search Section -->
+        <div class="search-sort-section">
+            <div class="title-search-row">
+                <div class="page-title-box">
+                    <h1>Mis eventos creados</h1>
+                    <p class="subtitle">Gestiona y haz seguimiento de tus creaciones</p>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍 Buscar</span>
+                    <input type="text" id="searchInput" placeholder="" onkeyup="filterEvents()">
+                </div>
+            </div>
+            
+            <div class="filters-row">
+                <div class="filter-dropdown-box">
+                    <select id="filterCategory" onchange="filterEvents()">
+                        <option value="all">Eventos (Todos)</option>
+                        <option value="concierto">Concierto</option>
+                        <option value="teatro">Obra de teatro</option>
+                        <option value="conferencia">Conferencia</option>
+                        <option value="festival">Festival</option>
+                        <option value="social">Evento social</option>
+                    </select>
+                </div>
+                
+                <div class="sort-dropdown-box">
+                    <select id="sortDate" onchange="sortEvents()">
+                        <option value="recent">Fecha (Reciente)</option>
+                        <option value="oldest">Fecha (Antigua)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
         <div class="events-container">
             <?php if (empty($myEvents)): ?>
@@ -166,8 +135,10 @@ try {
             <?php else: ?>
                 <div class="events-header">
                     <div class="header-col">Evento</div>
-                    <div class="header-col">Asistentes</div>
-                    <div class="header-col">Estado / Visible</div>
+                    <div class="header-col">Fecha</div>
+                    <div class="header-col">Boletos vendidos</div>
+                    <div class="header-col">Estado</div>
+                    <div class="header-col" style="text-align: right;">Acciones</div>
                 </div>
 
                 <?php foreach ($myEvents as $event): ?>
@@ -176,50 +147,72 @@ try {
                         $timestamp = strtotime($fechaOriginal);
                         
                         $diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-                        $meses = ['diciembre' => 'diciembre', 'enero' => 'enero', 'febrero' => 'febrero', 'marzo' => 'marzo', 'abril' => 'abril', 'mayo' => 'mayo', 'junio' => 'junio', 'julio' => 'julio', 'agosto' => 'agosto', 'septiembre' => 'septiembre', 'octubre' => 'octubre', 'noviembre' => 'noviembre'];
+                        $mesesLetras = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
                         
                         $diaLetra = $diasSemana[date('w', $timestamp)];
                         $diaNum = date('d', $timestamp);
                         $mesNum = (int)date('m', $timestamp);
-                        
-                        $mesesLetras = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
                         $mesLetra = $mesesLetras[$mesNum - 1];
-                        $anio = date('Y', $timestamp);
                         
-                        $fechaFormateada = "$diaLetra, $diaNum de $mesLetra de $anio";
+                        $diaLetraCapital = ucfirst($diaLetra);
+                        $mesLetraCompact = ucfirst(substr($mesLetra, 0, 3));
+                        $fechaMockup = "$diaLetraCapital " . (int)$diaNum . " $mesLetraCompact";
+                        
                         $horaFormateada = date('h:i a', strtotime($event['hora_inicio']));
                         
+                        $total_asistentes = (int)$event['total_asistentes'];
+                        $cap_total = (int)$event['cap_total'];
+                        $disponibles = max(0, $cap_total - $total_asistentes);
+                        
                         $estado = $event['estado']; // 'activo', 'finalizado', 'cancelado'
-                        $isChecked = $estado === 'activo' ? 'checked' : '';
+                        if ($total_asistentes >= $cap_total && $estado === 'activo') {
+                            $estado = 'lleno';
+                        }
+                        $isChecked = $estado === 'activo' || $estado === 'lleno' ? 'checked' : '';
+                        
+                        $nombre_recinto = $event['nombre_recinto'] ?: 'Plaza Pública del Sol';
                     ?>
-                    <div class="event-card" data-estado="<?php echo htmlspecialchars($estado); ?>">
+                    <div class="event-card" data-estado="<?php echo htmlspecialchars($estado); ?>" data-category="<?php echo htmlspecialchars(strtolower($event['nombre_categoria'])); ?>" data-timestamp="<?php echo $timestamp; ?>">
+                        <!-- 1. Columna Evento -->
                         <div class="event-info">
-                            <img style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0; border-radius: 8px;" src="<?php echo htmlspecialchars('../' . ($event['imagen_banner'] ?: 'Assets/img/img_home.png')); ?>" alt="Banner" class="event-image">
-                            <div class="event-details" style="flex: 1; min-width: 0; overflow: hidden;">
-                                <h3 class="event-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; color: #000; font-weight: 600;"><?php echo htmlspecialchars($event['nombre_evento']); ?></h3>
-                                <p class="event-date"><?php echo htmlspecialchars($fechaFormateada); ?> a las <?php echo htmlspecialchars($horaFormateada); ?> <span class="event-category">(<?php echo htmlspecialchars($event['nombre_categoria'] ?: 'General'); ?>)</span></p>
+                            <img src="<?php echo htmlspecialchars('../' . ($event['imagen_banner'] ?: 'Assets/img/img_home.png')); ?>" alt="Banner" class="event-image">
+                            <div class="event-details">
+                                <h3 class="event-title"><?php echo htmlspecialchars($event['nombre_evento']); ?></h3>
+                                <p class="event-date"><span class="event-category"><?php echo htmlspecialchars($event['nombre_categoria'] ?: 'General'); ?></span></p>
+                                <p class="event-location">📍 <?php echo htmlspecialchars($nombre_recinto); ?></p>
                             </div>
                         </div>
                         
-                        <div class="event-attendees">
-                            <span class="attendees-count"><?php echo (int)$event['total_asistentes']; ?> / <?php echo (int)$event['cap_total']; ?></span>
+                        <!-- 2. Columna Fecha -->
+                        <div class="event-date-col">
+                            <span><?php echo htmlspecialchars($fechaMockup); ?></span>
+                            <span class="time"><?php echo htmlspecialchars($horaFormateada); ?></span>
                         </div>
                         
-                        <div class="event-visibility">
-                            <label class="toggle-switch" title="Cambiar visibilidad/estado">
+                        <!-- 3. Columna Boletos vendidos -->
+                        <div class="event-attendees">
+                            <span class="attendees-count"><?php echo $total_asistentes; ?>/<?php echo $cap_total; ?> Ocupados</span>
+                            <span class="available"><?php echo $disponibles; ?> disponibles</span>
+                        </div>
+                        
+                        <!-- 4. Columna Estado -->
+                        <div class="event-visibility" style="gap: 8px;">
+                            <label class="toggle-switch" title="Cambiar visibilidad/estado" style="margin-right: 6px;">
                                 <input type="checkbox" data-event-id="<?php echo $event['id_evento']; ?>" <?php echo $isChecked; ?>>
                                 <span class="toggle-slider"></span>
                             </label>
-                            <span class="event-status-label <?php echo htmlspecialchars($estado); ?>">
+                            <span class="event-status-pill <?php echo htmlspecialchars($estado); ?>">
                                 <?php echo ucfirst($estado); ?>
                             </span>
                         </div>
                         
-                        <div class="event-actions">
+                        <!-- 5. Columna Acciones -->
+                        <div class="event-actions-col">
+                            <a href="dashbord.php?event_id=<?php echo $event['id_evento']; ?>" class="btn-statistics">Ver estadísticas</a>
                             <div class="actions-dropdown-container">
                                 <button class="actions-dropdown" type="button">
                                     Acciones
-                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor">
                                         <path d="M6 9L1 4h10z"/>
                                     </svg>
                                 </button>

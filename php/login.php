@@ -1,4 +1,13 @@
 <?php
+/**
+ * Sistema Agora - Gestión de Reservación de Eventos
+ *
+ * @category   Controllers
+ * @package    Agora_Core
+ * @author     Equipo de Desarrollo Agora
+ * @description API que procesa la solicitud de inicio de sesión de usuarios de manera asíncrona.
+ */
+
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/db.php';
 
@@ -25,13 +34,13 @@ if (empty($email) || empty($password)) {
 }
 
 try {
-    // Buscar el usuario por correo electrónico
+    // Buscar el usuario por correo electrónico (sentencia preparada con parámetro anónimo)
     $stmt = $pdo->prepare("SELECT id_usuario, nombre, correo_electronico, contrasena, rol FROM Usuario WHERE correo_electronico = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['contrasena'])) {
-        // Inicializar variables de sesión
+        // Inicializar variables de sesión seguras
         $_SESSION['usuario_id']     = $user['id_usuario'];
         $_SESSION['usuario_nombre'] = $user['nombre'];
         $_SESSION['usuario_email']  = $user['correo_electronico'];

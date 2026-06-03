@@ -1,4 +1,13 @@
 <?php
+/**
+ * Sistema Agora - Gestión de Reservación de Eventos
+ *
+ * @category   Controllers
+ * @package    Agora_Core
+ * @author     Equipo de Desarrollo Agora
+ * @description API que procesa la eliminación permanente de un evento por parte de su organizador.
+ */
+
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/auth.php';
 

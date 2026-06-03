@@ -1,50 +1,91 @@
-/* Reset básico */
+/* ==========================================================================
+   AGORA - DASHBOARD PREMIUM STYLE SHEET
+   ========================================================================== */
+
+/* Variables de Diseño y Colores Harmonizados */
+:root {
+    --bg-primary: #ffffff;
+    --card-bg: #424b75;       /* Azul Slate Oscuro idéntico al mockup */
+    --card-bg-light: #515a81; /* Variación para elementos internos y badges */
+    --text-main: #ffffff;
+    --text-muted: #b0b4cf;
+    --accent-gold: #ffd700;    /* Dorado VIP */
+    --accent-blue: #3b82f6;    /* Azul Zona A */
+    --accent-green: #10b981;   /* Verde Zona B */
+    --accent-orange: #f97316;  /* Naranja Zona C */
+    --accent-purple: #8b5cf6;  /* Morado Zona D */
+    
+    --btn-edit: #e28a2b;       /* Naranja premium del botón editar */
+    --btn-cancel: #7f859b;     /* Gris slate del botón cancelar */
+    --btn-delete: #e11d48;     /* Carmesí vibrante del botón eliminar */
+    
+    --shadow-premium: 0 10px 30px rgba(0, 0, 0, 0.12);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset y Tipografía Global */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Arial', sans-serif;
 }
 
 body {
-    background-color: #ffffff; /* Fondo exterior blanco */
-    padding: 40px 20px;
+    background-color: var(--bg-primary);
+    color: #111827;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 0;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
 }
 
+/* Contenedor Principal */
 .dashboard-container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 25px;
 }
 
-/* Tarjetas globales (El color azul oscuro) */
+/* Tarjetas Globales (Diseño Base del Mockup) */
 .card {
-    background-color: #3b4262; /* Color base del dashboard */
-    border-radius: 12px;
-    padding: 24px;
-    color: white;
+    background-color: var(--card-bg);
+    border-radius: 14px;
+    padding: 26px;
+    color: var(--text-main);
+    box-shadow: var(--shadow-premium);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 h2.section-title {
-    color: #111;
-    margin-top: 10px;
-    font-size: 1.5rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 15px;
+    margin-bottom: 5px;
 }
 
 h3 {
-    font-size: 1.1rem;
-    margin-bottom: 15px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
     font-weight: 600;
+    margin-bottom: 20px;
+    letter-spacing: -0.02em;
 }
 
-/* --- HEADER --- */
+/* ==========================================================================
+   1. HEADER EVENT CARD
+   ========================================================================== */
 .header-card {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 30px;
+    padding: 20px 25px;
+    background-color: var(--card-bg);
+    border-radius: 12px;
 }
 
 .header-info {
@@ -53,33 +94,57 @@ h3 {
     gap: 20px;
 }
 
-.header-img-placeholder {
-    width: 60px;
-    height: 60px;
-    background-color: #515a81;
+.header-img {
+    width: 65px;
+    height: 65px;
+    object-fit: cover;
     border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .header-text h1 {
-    font-size: 1.5rem;
-    margin-bottom: 5px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
 }
 
 .header-text p {
-    font-size: 0.9rem;
-    color: #b0b4cf;
+    font-size: 0.95rem;
+    color: var(--text-muted);
 }
 
+/* Status Badges */
 .badge {
-    background-color: #4ade80; /* Verde activo */
-    color: #064e3b;
-    padding: 8px 20px;
-    border-radius: 20px;
-    font-weight: bold;
+    display: inline-block;
+    padding: 8px 24px;
+    border-radius: 30px;
+    font-weight: 600;
     font-size: 0.9rem;
+    text-transform: capitalize;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* --- MÉTRICAS (GRID) --- */
+.badge.activo {
+    background-color: #22c55e; /* Verde brillante exacto */
+    color: #ffffff;
+}
+
+.badge.cancelado {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+.badge.finalizado {
+    background-color: #6b7280;
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   2. MÉTRICAS GENERALES (GRID DE 4 TARJETAS)
+   ========================================================================== */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -89,34 +154,48 @@ h3 {
 .metric-card {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
+    padding: 24px 20px;
+    border-radius: 12px;
 }
 
-.metric-icon {
-    width: 35px;
-    height: 35px;
-    background-color: #636fa1;
+.metric-icon-box {
+    width: 44px;
+    height: 44px;
+    background-color: var(--card-bg-light);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    font-size: 1.2rem;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1);
+}
+
+.metric-icon {
+    font-size: 1.35rem;
 }
 
 .metric-value {
-    font-size: 2rem;
-    margin: 5px 0 0 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.1rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+    letter-spacing: -0.03em;
 }
 
 .metric-label {
     font-size: 0.85rem;
-    color: #b0b4cf;
+    color: var(--text-muted);
+    line-height: 1.4;
 }
 
-/* --- SECCIÓN MEDIA (GRAFICAS E INFO) --- */
+/* ==========================================================================
+   3. SECCIÓN MEDIA (GRAFICOS E INFORMACIÓN)
+   ========================================================================== */
 .middle-layout {
     display: grid;
-    grid-template-columns: 1.8fr 1fr; /* Columna izq más grande */
+    grid-template-columns: 1.8fr 1fr;
     gap: 20px;
 }
 
@@ -126,72 +205,336 @@ h3 {
     gap: 20px;
 }
 
-.chart-placeholder {
-    width: 100%;
-    min-height: 200px;
-    background-color: #2f3552; /* Fondo para que se note el área */
-    border-radius: 8px;
-    border: 1px dashed #636fa1;
+/* --- GRÁFICA DE BARRAS DINÁMICA --- */
+.chart-container-bars {
+    position: relative;
+    height: 220px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    gap: 15px;
 }
 
-/* Info del Evento */
+.bar-chart-y-axis {
+    width: 30px;
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-right: 8px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bar-chart-visual {
+    flex: 1;
+    height: 180px;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chart-bar-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 60px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.chart-bar-fill {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    transition: var(--transition-smooth);
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.chart-bar-fill:hover {
+    filter: brightness(1.15);
+    transform: scaleX(1.05);
+}
+
+.bar-value-tooltip {
+    position: absolute;
+    top: -24px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    opacity: 0.9;
+}
+
+.bar-label-text {
+    position: absolute;
+    bottom: -22px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.no-chart-data {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* --- SLIDER TIMELINE EN GRÁFICA DE BARRAS --- */
+.event-timeline-box {
+    margin-top: 30px;
+    padding: 10px 5px 5px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.timeline-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.timeline-labels strong {
+    color: #ffffff;
+}
+
+.timeline-bar-bg {
+    position: relative;
+    width: 100%;
+    height: 5px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.timeline-bar-fill {
+    height: 100%;
+    background-color: #ffffff;
+    border-radius: 3px;
+}
+
+.timeline-bullet {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+/* --- GRÁFICA DE DONA DINÁMICA (SVG) --- */
+.chart-container-donut {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    margin-top: 10px;
+}
+
+.donut-visual-box {
+    position: relative;
+    width: 150px;
+    height: 150px;
+}
+
+.donut-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.donut-segment {
+    transition: var(--transition-smooth);
+}
+
+.donut-segment:hover {
+    stroke-width: 5.5;
+    filter: brightness(1.1);
+}
+
+.donut-center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+}
+
+.donut-center-val {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
+}
+
+.donut-center-lbl {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+}
+
+/* Leyenda del gráfico */
+.donut-legend-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.donut-legend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.legend-label-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.legend-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.legend-name {
+    color: var(--text-muted);
+}
+
+.legend-value {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* --- TARJETA DE INFORMACIÓN DEL EVENTO --- */
+.info-card {
+    padding: 26px 30px;
+}
+
 .info-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr;
-    row-gap: 12px;
+    grid-template-columns: 1fr 1.8fr;
+    row-gap: 16px;
     font-size: 0.95rem;
-    margin-bottom: 25px;
-    color: #b0b4cf;
+    margin-bottom: 30px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.info-label {
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
 .info-data {
-    color: white;
+    color: #ffffff;
+    font-weight: 600;
     text-align: right;
 }
 
-/* Botones */
+/* Botones de acción del evento */
 .action-buttons {
     display: flex;
-    gap: 10px;
+    gap: 12px;
 }
 
 .btn {
     flex: 1;
-    padding: 12px;
+    padding: 13px;
     border: none;
-    border-radius: 6px;
-    font-weight: bold;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
-    color: white;
-    transition: opacity 0.2s;
+    text-align: center;
+    text-decoration: none;
+    transition: var(--transition-smooth);
 }
 
-.btn:hover { opacity: 0.8; }
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    filter: brightness(1.1);
+}
 
-.btn-warning { background-color: #f59e0b; } /* Naranja */
-.btn-secondary { background-color: #9ca3af; } /* Gris */
-.btn-danger { background-color: #ef4444; } /* Rojo */
+.btn-warning {
+    background-color: var(--btn-edit);
+    color: #ffffff;
+}
 
-/* Alertas automáticas */
-.alerts-card p, .alerts-card ul {
+.btn-secondary {
+    background-color: var(--btn-cancel);
+    color: #ffffff;
+}
+
+.btn-danger {
+    background-color: var(--btn-delete);
+    color: #ffffff;
+}
+
+/* --- TARJETA DE ALERTAS AUTOMÁTICAS --- */
+.alerts-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.alerts-desc {
     font-size: 0.9rem;
-    color: #b0b4cf;
-    line-height: 1.6;
+    color: var(--text-muted);
+    line-height: 1.5;
 }
 
 .highlight-email {
-    color: #f59e0b !important;
-    margin: 10px 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin: 12px 0 16px 0;
+    letter-spacing: -0.01em;
 }
 
-.alerts-card ul {
-    margin-top: 10px;
+.alerts-list {
+    margin-top: 14px;
     margin-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
 }
 
-/* --- INCIDENCIAS --- */
+.alerts-list li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   4. INCIDENCIAS REPORTADAS (TARJETAS BLANCAS DENTRO DE CARD AZUL)
+   ========================================================================= */
 .incidents-section {
-    min-height: 300px;
+    width: 100%;
 }
 
 .incidents-list {
@@ -202,72 +545,129 @@ h3 {
 }
 
 .incident-item {
-    background-color: #ffffff; /* Fondo blanco para las quejas */
-    border-radius: 8px;
-    padding: 15px 20px;
+    background-color: #ffffff; /* Tarjeta blanca del mockup */
+    border-radius: 10px;
+    padding: 20px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #333;
+    color: #1f2937;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    transition: var(--transition-smooth);
+}
+
+.incident-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .incident-content {
     flex: 1;
+    padding-right: 20px;
 }
 
 .incident-author {
-    font-size: 1rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #111827;
     margin-bottom: 2px;
-    color: #000;
 }
 
 .incident-date {
     font-size: 0.8rem;
-    color: #666;
+    color: #9ca3af;
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    font-weight: 500;
 }
 
 .incident-text {
     font-size: 0.95rem;
-    color: #444;
+    color: #4b5563;
+    line-height: 1.5;
 }
 
 .btn-danger-small {
-    background-color: #ef4444;
+    background-color: var(--btn-delete);
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 9px 18px;
     border-radius: 6px;
-    font-weight: bold;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
     cursor: pointer;
+    transition: var(--transition-smooth);
+    box-shadow: 0 2px 6px rgba(225, 29, 72, 0.2);
 }
 
-/* Responsividad para pantallas más pequeñas */
+.btn-danger-small:hover {
+    background-color: #be123c;
+    transform: scale(1.03);
+}
+
+.no-incidents-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    border: 2px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+
+.no-incidents-msg {
+    color: var(--text-muted);
+    font-size: 1rem;
+    text-align: center;
+}
+
+/* ==========================================================================
+   5. RESPONSIVIDAD Y ADAPTABILIDAD A PANTALLAS
+   ========================================================================== */
 @media (max-width: 900px) {
     .metrics-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    
     .middle-layout {
         grid-template-columns: 1fr;
     }
+    
     .header-card {
         flex-direction: column;
         align-items: flex-start;
         gap: 15px;
+        padding: 20px;
     }
+    
     .header-status {
         align-self: flex-end;
     }
+    
     .action-buttons {
         flex-direction: column;
     }
+    
     .incident-item {
         flex-direction: column;
         align-items: flex-start;
-        gap: 15px;
+        gap: 18px;
     }
+    
     .incident-action {
         align-self: flex-end;
+    }
+}
+
+@media (max-width: 500px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-container {
+        padding: 0 15px;
+        margin: 20px auto;
     }
 }

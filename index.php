@@ -5,12 +5,13 @@ require_once __DIR__ . '/php/auth.php';
 try {
     $stmtEvents = $pdo->query("
         SELECT e.*, c.nombre_categoria, 
-               COALESCE(z.lugares_totales, 0) AS lugares_totales,
-               COALESCE(z.lugares_disponibles, 0) AS lugares_disponibles
+               COALESCE(SUM(z.lugares_totales), e.capacidad_total) AS lugares_totales,
+               COALESCE(SUM(z.lugares_disponibles), e.capacidad_total) AS lugares_disponibles
         FROM Evento e
         LEFT JOIN Categoria c ON e.id_categoria = c.id_categoria
         LEFT JOIN Zona_Boleto z ON e.id_evento = z.id_evento
         WHERE e.estado = 'activo'
+        GROUP BY e.id_evento, c.nombre_categoria
         ORDER BY e.fecha ASC, e.hora_inicio ASC
         LIMIT 6
     ");
@@ -34,106 +35,501 @@ try {
     <title>Agora - Reservación de Eventos</title>
     <link rel="shortcut icon" href="Assets/img/logo.png" type="image/x-icon">
 
-    <!-- Carrusel de imágenes -->
+
+    <!-- Premium Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Premium Core Styling Overrides -->
     <style>
-        .carousel {
-            position: relative;
-        }
-
-        .carousel__track-container {
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
-            max-height: 60vh;
-        }
-
-        .carousel__track {
-            display: flex;
-            align-items: stretch;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            font-size: 0;
-            transition: transform 0.8s ease-in-out;
-            width: 100%;
-            height: 100%;
-        }
-
-        .carousel__slide {
-            flex: 0 0 100%;
-            width: 100%;
-            max-width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            background-color: #000;
-            border: none;
+            font-family: 'Outfit', sans-serif;
         }
 
-        .carousel__slide img {
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navbar & Footer Overrides */
+        .nav {
+            background-color: #091430 !important;
+            padding: 20px 70px !important;
+            height: auto !important;
+        }
+
+        .nav_links a,
+        .menu-btn,
+        .user-welcome {
+            color: white !important;
+            font-family: 'Outfit', sans-serif !important;
+        }
+
+        .btn-registrarse {
+            background-color: #4a5f8f !important;
+            color: white !important;
+            border-radius: 8px !important;
+            padding: 8px 20px !important;
+            font-weight: 700 !important;
+            transition: background-color 0.2s !important;
+        }
+
+        .btn-registrarse:hover {
+            background-color: #3b4e78 !important;
+        }
+        
+        .footer, .footer_content, .name, .contact_info, .div_3 {
+            background-color: #091430 !important;
+        }
+
+        /* Premium Hero Section */
+        .hero-container {
+            display: flex;
+            width: 100%;
+            height: 440px;
+            background-color: #091430;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .hero-text-box {
+            flex: 1.2;
+            background: linear-gradient(135deg, #091430 0%, #0d1e45 100%);
+            padding: 50px 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: white;
+            z-index: 2;
+        }
+
+        .hero-text-box h2 {
+            font-size: clamp(2rem, 3.2vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 15px;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-text-box p {
+            font-size: clamp(0.95rem, 1.4vw, 1.2rem);
+            color: #cbd5e1;
+            margin-bottom: 30px;
+            line-height: 1.5;
+            max-width: 550px;
+        }
+
+        .btn-create-now {
+            background-color: #e09832;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 700;
+            text-decoration: none;
+            align-self: flex-start;
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(224, 152, 50, 0.35);
+            font-size: 0.95rem;
+            text-transform: none;
+        }
+
+        .btn-create-now:hover {
+            background-color: #c98223;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(224, 152, 50, 0.45);
+        }
+
+        .hero-image-box {
+            flex: 1.8;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .hero-image-box .hero-img-card {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hero-image-box .hero-img-card img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            object-position: center;
-            display: block;   
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .event-selector-banner {
+        .hero-image-box .hero-img-card:hover img {
+            transform: scale(1.06);
+        }
+
+        /* Explore & Filter Row styling */
+        .explore-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 50px 70px 10px;
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 25px;
+        }
+
+        .explore-title-block h2 {
+            font-size: clamp(1.8rem, 2.5vw, 2.4rem);
+            font-weight: 800;
+            color: #091430;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.02em;
+        }
+
+        .explore-title-block p {
+            font-size: 1.05rem;
+            color: #64748b;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .explore-search-block {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .explore-search-block label {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #091430;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .explore-search-block input {
+            padding: 10px 15px;
+            border: 2px solid #091430;
+            border-radius: 8px;
+            width: 280px;
+            font-size: 1rem;
+            font-weight: 600;
+            outline: none;
+            color: #091430;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .explore-search-block input:focus {
+            box-shadow: 0 0 0 3px rgba(9, 20, 48, 0.15);
+        }
+
+        .explore-filter-row {
+            display: flex;
+            align-items: center;
+            gap: 35px;
+            padding: 20px 70px 0;
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 18px;
+        }
+
+        .filter-pill {
+            background-color: #4a5f8f;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(74, 95, 143, 0.15);
+        }
+
+        .filter-pill:hover {
+            background-color: #3b4e78;
+            transform: translateY(-1px);
+        }
+
+        .filter-pill-text {
+            color: #091430;
+            font-weight: 700;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .filter-pill-text:hover {
+            color: #4a5f8f;
+        }
+
+        /* Custom Cards Layout */
+        .events-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)) !important;
+            gap: 30px !important;
+            padding: 40px 70px !important;
+            max-width: 1440px !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+        }
+
+        .event-card {
+            position: relative;
+            height: 420px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+            margin: 15px !important;
+        }
+
+        .event-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 35px rgba(9, 20, 48, 0.15);
+        }
+
+        .event-card-bg {
             position: absolute;
-            transform: translate(30%, -30%);
-            margin: -90px auto 40px;
-            width: calc(100% - 40px);
-            max-width: 1180px;
-            padding: 28px 32px;
-            background: rgba(9, 20, 48, 0.9);
-            border-radius: 28px;
-            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
-            z-index: 10;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            transition: transform 0.5s ease;
+        }
+
+        .event-card:hover .event-card-bg {
+            transform: scale(1.06);
+        }
+
+        .event-card-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to top, 
+                rgba(0,0,0,0.95) 0%, 
+                rgba(0,0,0,0.8) 55%, 
+                rgba(0,0,0,0.4) 80%, 
+                rgba(0,0,0,0) 100%);
+            padding: 25px;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: white;
+            box-sizing: border-box;
+            text-align: left;
+        }
+
+        .event-card-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: white;
+            margin: 0;
+            line-height: 1.25;
+        }
+
+        .event-card-category {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin: 0;
+            letter-spacing: 0.08em;
+        }
+
+        .event-card-location {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin: 2px 0 6px 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+            opacity: 0.85;
+        }
+
+        .event-card-date {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .event-card-btn {
+            background-color: #4a5f8f;
+            color: white;
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background-color 0.2s, transform 0.1s;
+            width: 100%;
+            border: none;
+            cursor: pointer;
+            box-sizing: border-box;
+            display: inline-block;
+        }
+
+        .event-card-btn:hover {
+            background-color: #3b4e78;
+        }
+
+        .event-card-btn:active {
+            transform: scale(0.98);
+        }
+
+        .no-events-message {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            grid-column: 1 / -1;
+        }
+
+        .ver-mas-btn {
+            text-align: center;
+            margin: 30px 0 60px;
+        }
+
+        .ver-mas-btn a {
+            background-color: #4a5f8f;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.2s, transform 0.2s;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(74, 95, 143, 0.15);
+        }
+
+        .ver-mas-btn a:hover {
+            background-color: #3b4e78;
+            transform: translateY(-2px);
+        }
+
+        /* Pagination style */
+        .explore-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 40px auto 60px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .page-arrow {
+            cursor: pointer;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+
+        .page-arrow:hover:not(.disabled) {
+            color: #091430;
+        }
+
+        .page-arrow.disabled {
+            color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .page-num {
+            cursor: pointer;
+            padding: 5px 12px;
+            transition: color 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .page-num:hover:not(.active) {
+            color: #091430;
+        }
+
+        .page-num.active {
+            color: #091430;
+            border-bottom: 2px solid #091430;
+            font-weight: 800;
+        }
+
+        .page-divider {
+            color: #cbd5e1;
+        }
+
+        /* Restored Premium App Banner Styling */
+        .event-selector-banner {
+            margin: 50px auto;
+            width: calc(100% - 140px);
+            max-width: 1440px;
+            padding: 45px 50px;
+            background: linear-gradient(135deg, #091430 0%, #15254c 100%);
+            border-radius: 24px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
             color: #fff;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .event-selector-banner h1 {
-            margin: 0 0 12px;
-            font-size: clamp(2rem, 3vw, 3.2rem);
-            line-height: 1.05;
-            letter-spacing: -0.03em;
+            font-size: clamp(1.8rem, 2.5vw, 2.6rem);
+            font-weight: 800;
+            margin: 0;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
         }
 
         .event-selector-banner p {
-            margin: 0 0 18px;
-            max-width: 760px;
-            color: rgba(255,255,255,0.88);
-            font-size: 1rem;
-            line-height: 1.7;
+            font-size: 1.05rem;
+            color: #cbd5e1;
+            margin: 0;
+            line-height: 1.5;
+            max-width: 800px;
         }
 
         .event-selector-features {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 22px;
+            gap: 24px;
+            margin: 10px 0;
         }
 
         .event-selector-feature {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
-            flex: 1 1 220px;
-            min-width: 180px;
+            gap: 15px;
+            flex: 1 1 250px;
         }
 
         .event-selector-feature-icon {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.16);
+            background: rgba(255, 255, 255, 0.1);
             display: grid;
             place-items: center;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             color: #fff;
             flex-shrink: 0;
         }
@@ -142,211 +538,127 @@ try {
             display: flex;
             flex-direction: column;
             gap: 4px;
+            text-align: left;
         }
 
         .event-selector-feature-text strong {
-            font-size: 0.98rem;
-            line-height: 1.3;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
         }
 
         .event-selector-feature-text span {
-            font-size: 0.89rem;
-            color: rgba(255,255,255,0.78);
-            line-height: 1.5;
+            font-size: 0.88rem;
+            color: #cbd5e1;
+            line-height: 1.4;
         }
 
         .event-selector-actions {
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
             align-items: center;
-            justify-content: flex-start;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
         }
 
         .event-selector-button {
             display: inline-block;
-            text-decoration: none;
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-
-        .event-selector-button img {
-            max-width: 200px;
-            height: auto;
-            display: block;
+            height: 48px;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .event-selector-button:hover {
-            transform: scale(1.05);
-            opacity: 0.85;
+            transform: translateY(-3px);
         }
 
-        @media (max-width: 900px) {
-            .event-selector-banner {
-                width: calc(100% - 24px);
-                padding: 22px 20px;
-                transform: translate(0, 0);
-                position: relative;
-                margin: 20px auto;
-            }
-
-            .event-selector-feature {
-                flex: 1 1 100%;
-            }
+        .event-selector-button img {
+            height: 48px;
+            width: auto;
+            display: block;
+            object-fit: contain;
+            border-radius: 8px;
         }
-
-        @media (max-width: 600px) {
-            .carousel__track-container { height: 200px; }
-            .event-selector-banner {
-                padding: 18px 16px;
-                border-radius: 20px;
-            }
-
-            .event-selector-banner h1 {
-                font-size: 1.75rem;
-            }
-        }
-
-        .carousel__button { display: none !important; }
-
-        @media (max-width: 800px) {
-            .carousel__track-container { height: 260px; }
-        }
-    </style>
-
-    <!-- Hojas de estilo de los eventos -->
-    <style>
-        .events-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            gap: 20px;
-            padding: 50px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        .event-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s;
-        }
-        .event-card:hover {
-            transform: translateY(-5px);
-        }
-        .card-image-placeholder {
-            height: 180px;
-            background-color: #4a5f8f;
-            color: white;
+        
+        /* Make Google Play badge look consistent with App Store black badge */
+        .event-selector-button.google-play {
+            background-color: #000;
+            border-radius: 8px;
+            padding: 0 10px;
+            border: 1px solid rgba(255,255,255,0.15);
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+        }
+        
+        .event-selector-button.google-play img {
+            height: 38px; /* Slightly smaller inside the black capsule */
         }
 
-        .card-image-placeholder img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .card-content {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            flex-grow: 1;
-        }
-        .card-category {
-            font-size: 0.85rem;
-            color: #4a5f8f;
-            font-weight: 600;
-            margin: 0;
-            text-transform: uppercase;
-        }
-        .card-title {
-            font-size: 1.4rem;
-            margin: 0;
-            color: #333;
-            font-weight: 700;
-        }
-        .card-description {
-            font-size: 0.9rem;
-            color: #666;
-            margin: 0 0 10px 0;
-            flex-grow: 1;
-            line-height: 1.5;
-        }
-        .card-footer {
-            border-top: 1px solid #eee;
-            padding-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: auto;
-        }
-        .card-date-time {
-            font-size: 0.8rem;
-            color: #555;
-            margin: 0;
-        }
-        .card-capacity {
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        .card-capacity.full {
-             color: #d32f2f;
-        }
-        .card-capacity.available {
-             color: #388e3c;
-        }
-        .card-button {
-            background-color: #4a5f8f;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            text-align: center;
-            transition: background-color 0.2s;
-            display: block;
-            margin-top: 10px;
-            font-weight: 500;
-        }
-        .card-button:hover {
-            background-color: #3e5178;
-        }
-        .no-events-message {
-            text-align: center;
-            padding: 50px;
-            color: #666;
-            grid-column: 1 / -1;
-        }
-        .ver-mas-btn {
-            text-align: center;
-            margin: 30px 0;
-        }
-        .ver-mas-btn a {
-            background-color: #4a5f8f;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 6px;
-            text-decoration: none;
-            display: inline-block;
-            transition: background-color 0.2s;
-            font-weight: 500;
-        }
-        .ver-mas-btn a:hover {
-            background-color: #3e5178;
-        }
-
-        @media (max-width: 600px) {
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .nav {
+                padding: 20px 40px !important;
+            }
+            .hero-text-box {
+                padding: 40px;
+            }
+            .explore-section-header, 
+            .explore-filter-row,
             .events-grid {
+                padding-left: 40px;
+                padding-right: 40px;
+            }
+            .event-selector-banner {
+                width: calc(100% - 80px);
+                padding: 30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                padding: 20px 30px !important;
+            }
+            .hero-container {
+                flex-direction: column;
+                height: auto;
+            }
+            .hero-text-box {
+                padding: 40px 24px;
+                align-items: center;
+                text-align: center;
+            }
+            .btn-create-now {
+                align-self: center;
+                width: 100%;
+                text-align: center;
+            }
+            .hero-image-box {
+                display: none;
+            }
+            .explore-section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 30px 24px 10px;
+            }
+            .explore-search-block {
+                width: 100%;
+            }
+            .explore-search-block input {
+                width: 100%;
+            }
+            .explore-filter-row {
+                padding: 15px 24px;
+                gap: 15px;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            .events-grid {
+                padding: 20px 24px;
                 grid-template-columns: 1fr;
-                padding: 20px;
+            }
+            .event-selector-banner {
+                width: calc(100% - 48px);
+                padding: 24px 20px;
             }
         }
     </style>
@@ -449,27 +761,120 @@ try {
         </nav>
     </div>
 
-    <section class="info_main">
-        <div class="info">
-            <div class="cont_img">
-                <div class="carousel">
-                    <div class="carousel__track-container">
-                        <ul class="carousel__track">
-                            <li class="carousel__slide current-slide"><img src="Assets/img/imgconcierto.jpg" alt="Concierto"></li>
-                            <li class="carousel__slide"><img src="Assets/img/imgconferencia.jpg" alt="Conferencia"></li>
-                            <li class="carousel__slide"><img src="Assets/img/imgdeporte.jpg" alt="Deporte"></li>
-                            <li class="carousel__slide"><img src="Assets/img/imgevento_social.jpg" alt="Evento social"></li>
-                            <li class="carousel__slide"><img src="Assets/img/imgsocial.jpg" alt="Social"></li>
-                            <li class="carousel__slide"><img src="Assets/img/imgteatro.jpg" alt="Teatro"></li>
-                        </ul>
-                    </div>
-                </div>
+    <!-- Premium Split Hero Section with Active Carousel -->
+    <div class="hero-container">
+        <div class="hero-text-box">
+            <h2>Tu escenario, tu evento.</h2>
+            <p>Encuentra, crea y gestiona eventos que inspiran.</p>
+            <a href="views/crear_evento.php" class="btn-create-now">Empieza a crear tu evento ahora</a>
+        </div>
+        <div class="hero-image-box">
+            <div class="carousel__track-container" style="width: 100%; height: 100%; overflow: hidden; position: relative;">
+                <ul class="carousel__track" style="display: flex; list-style: none; margin: 0; padding: 0; transition: transform 0.8s ease-in-out; height: 100%;">
+                    <li class="carousel__slide current-slide" style="min-width: 100%; height: 100%;"><img src="Assets/img/imgconcierto.jpg" alt="Concierto" style="width: 100%; height: 100%; object-fit: cover;"></li>
+                    <li class="carousel__slide" style="min-width: 100%; height: 100%;"><img src="Assets/img/imgconferencia.jpg" alt="Conferencia" style="width: 100%; height: 100%; object-fit: cover;"></li>
+                    <li class="carousel__slide" style="min-width: 100%; height: 100%;"><img src="Assets/img/imgdeporte.jpg" alt="Deporte" style="width: 100%; height: 100%; object-fit: cover;"></li>
+                    <li class="carousel__slide" style="min-width: 100%; height: 100%;"><img src="Assets/img/imgevento_social.jpg" alt="Evento social" style="width: 100%; height: 100%; object-fit: cover;"></li>
+                    <li class="carousel__slide" style="min-width: 100%; height: 100%;"><img src="Assets/img/imgsocial.jpg" alt="Social" style="width: 100%; height: 100%; object-fit: cover;"></li>
+                    <li class="carousel__slide" style="min-width: 100%; height: 100%;"><img src="Assets/img/imgteatro.jpg" alt="Teatro" style="width: 100%; height: 100%; object-fit: cover;"></li>
+                </ul>
             </div>
         </div>
-    </section>
-    
-    <br>
+    </div>
 
+    <!-- Explore, Search & Filter row -->
+    <div class="explore-section-header">
+        <div class="explore-title-block">
+            <h2>Explora y reserva el evento ideal</h2>
+            <p>¡Encuentra el evento perfecto para ti!</p>
+        </div>
+        <div class="explore-search-block">
+            <label for="search-input"><span class="search-icon">🔍</span> Buscar</label>
+            <input type="text" id="search-input" placeholder="">
+        </div>
+    </div>
+
+    <div class="explore-filter-row">
+        <div class="filter-pill">
+            <span>Próximos eventos</span> <span>▾</span>
+        </div>
+        <div class="filter-pill-text">
+            <span>Categoría (Todas)</span> <span>▾</span>
+        </div>
+        <div class="filter-pill-text">
+            <span>Fecha (Reciente)</span> <span>▾</span>
+        </div>
+    </div>
+
+    <!-- Cargar eventos dinámicos -->
+    <section class="event-cards-section" style="padding: 20px 0; background-color: transparent;">
+        <div class="events-grid" style="display: grid !important; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)) !important; gap: 30px !important; padding: 40px 70px !important; max-width: 1440px !important; margin: 0 auto !important; width: 100% !important; background: transparent !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible !important;">
+            <?php if (empty($events)): ?>
+                <div class="no-events-message">
+                    <p style="font-size: 1.2rem; color: #555; font-weight: 600;">No hay eventos disponibles en este momento. ¡Sé el primero en publicar uno!</p>
+                    <a href="views/crear_evento.php" class="event-card-btn" style="display: inline-block; margin-top: 20px; padding: 12px 30px; width: auto;">Publicar Evento</a>
+                </div>
+            <?php else: ?>
+                <?php foreach ($events as $event): ?>
+                    <?php
+                        // Formatear fecha
+                        $fechaOriginal = $event['fecha'];
+                        $timestamp = strtotime($fechaOriginal);
+                        
+                        // Traducción manual de día y mes
+                        $diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                        $mesesShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                        
+                        $diaLetra = $diasSemana[date('w', $timestamp)];
+                        $diaNum = date('j', $timestamp);
+                        $mesLetra = $mesesShort[(int)date('m', $timestamp) - 1];
+                        
+                        $fechaFormateada = "$diaLetra $diaNum $mesLetra";
+                        $horaFormateada = date('h:i a', strtotime($event['hora_inicio']));
+                        
+                        $totales = (int)$event['lugares_totales'];
+                        $disponibles = (int)$event['lugares_disponibles'];
+                        $cuposClass = ($disponibles <= 0) ? 'full' : 'available';
+                        
+                        if ($disponibles <= 0) {
+                            $cuposText = "Agotado";
+                        } else {
+                            $cuposText = "Asientos: $disponibles / $totales";
+                        }
+                    ?>
+                    <div class="event-card" style="position: relative !important; height: 420px !important; border-radius: 16px !important; overflow: hidden !important; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important; background: #0f172a !important; display: flex !important; flex-direction: column !important; justify-content: flex-end !important; margin: 0 !important;">
+                        <!-- Insignia de Asientos Disponibles Premium -->
+                        <span class="event-card-badge <?php echo $cuposClass; ?>" style="position: absolute !important; top: 15px !important; right: 15px !important; background-color: <?php echo ($disponibles <= 0) ? 'rgba(239, 68, 68, 0.95)' : 'rgba(16, 185, 129, 0.95)'; ?> !important; color: white !important; padding: 6px 12px !important; border-radius: 20px !important; font-size: 0.8rem !important; font-weight: 700 !important; z-index: 3 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important; text-transform: uppercase !important; letter-spacing: 0.5px !important;">
+                            <?php echo $cuposText; ?>
+                        </span>
+                        <img class="event-card-bg" src="<?php echo htmlspecialchars($event['imagen_banner'] ?: 'Assets/img/img_home.png'); ?>" alt="<?php echo htmlspecialchars($event['nombre_evento']); ?>">
+                        <div class="event-card-overlay">
+                            <h3 class="event-card-title"><?php echo htmlspecialchars($event['nombre_evento']); ?></h3>
+                            <p class="event-card-category"><?php echo htmlspecialchars($event['nombre_categoria'] ?: 'General'); ?></p>
+                            <p class="event-card-location"><?php echo htmlspecialchars(substr($event['descripcion'], 0, 80)) . (strlen($event['descripcion']) > 80 ? '...' : ''); ?></p>
+                            <div class="event-card-date"><?php echo htmlspecialchars($fechaFormateada); ?></div>
+                            <a href="views/reservar.php?event_id=<?php echo $event['id_evento']; ?>" class="event-card-btn">Ver detalles</a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+
+        <!-- Centered Pagination row matching mockup -->
+        <div class="explore-pagination">
+            <span class="page-arrow disabled">❮ Anterior</span>
+            <span class="page-num active">1</span>
+            <span class="page-divider">|</span>
+            <span class="page-num">2</span>
+            <span class="page-arrow">Siguiente ❯</span>
+        </div>
+
+        <div class="ver-mas-btn">
+            <a href="views/eventos.php">Ver todos los eventos →</a>
+        </div>
+    </section>
+
+    <!-- Restored & Adapted Premium App Banner -->
     <section>
         <div class="event-selector-banner">
             <h1>Tu Pasaporte a Experiencias Inolvidables</h1>
@@ -498,87 +903,13 @@ try {
                 </div>
             </div>
             <div class="event-selector-actions">
-                <div class="store-button-wrapper app-store-wrapper">
-                    <a href="https://www.apple.com/mx/app-store/" class="event-selector-button app-store" target="_blank" rel="noopener noreferrer">
-                        <img src="Assets/img/available-on-the-app-store.svg" alt="App Store">
-                    </a>
-                </div>
-                <div class="store-button-wrapper google-play-wrapper">
-                    <a href="https://play.google.com/store/apps?hl=es_MX&pli=1" class="event-selector-button google-play" target="_blank" rel="noopener noreferrer">
-                        <img src="Assets/img/Google_Play-Logo.wine.svg" alt="Google Play">
-                    </a>
-                </div>
+                <a href="https://www.apple.com/mx/app-store/" class="event-selector-button app-store" target="_blank" rel="noopener noreferrer">
+                    <img src="Assets/img/available-on-the-app-store.svg" alt="App Store">
+                </a>
+                <a href="https://play.google.com/store/apps?hl=es_MX&pli=1" class="event-selector-button google-play" target="_blank" rel="noopener noreferrer">
+                    <img src="Assets/img/Google_Play-Logo.wine.svg" alt="Google Play">
+                </a>
             </div>
-        </div>
-    </section>
-
-    <br>
-
-    <!-- Cargar eventos dinámicos -->
-    <section class="event-cards-section">
-        <h2 style="text-align: center; font-size: 2rem; color: #091430; margin-top: 30px; font-weight: 700;">Próximos Eventos Destacados</h2>
-        <p style="text-align: center; color: #666; margin-bottom: 20px;">¡No te pierdas de las mejores experiencias!</p>
-        
-        <div class="events-grid">
-            <?php if (empty($events)): ?>
-                <div class="no-events-message">
-                    <p style="font-size: 1.2rem; color: #555;">No hay eventos disponibles en este momento. ¡Sé el primero en publicar uno!</p>
-                    <a href="views/crear_evento.php" class="card-button" style="display: inline-block; margin-top: 15px; padding: 10px 25px;">Publicar Evento</a>
-                </div>
-            <?php else: ?>
-                <?php foreach ($events as $event): ?>
-                    <?php
-                        // Formatear fecha
-                        $fechaOriginal = $event['fecha'];
-                        $timestamp = strtotime($fechaOriginal);
-                        
-                        // Traducción manual de día y mes
-                        $diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                        $meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-                        
-                        $diaLetra = $diasSemana[date('w', $timestamp)];
-                        $diaNum = date('d', $timestamp);
-                        $mesNum = (int)date('m', $timestamp) - 1;
-                        $mesLetra = $meses[$mesNum];
-                        $anio = date('Y', $timestamp);
-                        
-                        $fechaFormateada = "$diaLetra, $diaNum de $mesLetra de $anio";
-                        $horaFormateada = date('h:i a', strtotime($event['hora_inicio']));
-                        
-                        $totales = (int)$event['lugares_totales'];
-                        $disponibles = (int)$event['lugares_disponibles'];
-                        $cuposClass = ($disponibles <= 0) ? 'full' : 'available';
-                        
-                        if ($disponibles <= 0) {
-                            $cuposText = "Agotado";
-                        } else {
-                            $cuposText = "Cupos: $disponibles / $totales";
-                        }
-                    ?>
-                    <div class="event-card">
-                        <div class="card-image-placeholder">
-                            <img src="<?php echo htmlspecialchars($event['imagen_banner'] ?: 'Assets/img/img_home.png'); ?>" alt="<?php echo htmlspecialchars($event['nombre_evento']); ?>">
-                        </div>
-                        <div class="card-content">
-                            <p class="card-category"><?php echo htmlspecialchars($event['nombre_categoria'] ?: 'General'); ?></p>
-                            <h3 class="card-title"><?php echo htmlspecialchars($event['nombre_evento']); ?></h3>
-                            <p class="card-description"><?php echo htmlspecialchars(substr($event['descripcion'], 0, 120)) . (strlen($event['descripcion']) > 120 ? '...' : ''); ?></p>
-                            <div class="card-footer">
-                                <div class="card-date-time" style="max-width: 60%;">
-                                    <strong><?php echo htmlspecialchars($fechaFormateada); ?></strong>
-                                    <br>
-                                    <span>a las <?php echo htmlspecialchars($horaFormateada); ?></span>
-                                </div>
-                                <p class="card-capacity <?php echo $cuposClass; ?>"><?php echo $cuposText; ?></p>
-                            </div>
-                            <a href="views/reservar.php?event_id=<?php echo $event['id_evento']; ?>" class="card-button">Ver Detalles</a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
-        <div class="ver-mas-btn">
-            <a href="views/eventos.php">Ver todos los eventos →</a>
         </div>
     </section>
 
@@ -605,7 +936,7 @@ try {
         </footer>
     </div>
 
-    <!-- Script del Carrusel -->
+    <!-- Script del Carrusel (Restaurado) -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const track = document.querySelector('.carousel__track');

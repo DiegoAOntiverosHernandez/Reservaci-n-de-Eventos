@@ -5,12 +5,13 @@ require_once __DIR__ . '/../php/auth.php';
 try {
     $stmtEvents = $pdo->query("
         SELECT e.*, c.nombre_categoria, 
-               COALESCE(z.lugares_totales, 0) AS lugares_totales,
-               COALESCE(z.lugares_disponibles, 0) AS lugares_disponibles
+               COALESCE(SUM(z.lugares_totales), e.capacidad_total) AS lugares_totales,
+               COALESCE(SUM(z.lugares_disponibles), e.capacidad_total) AS lugares_disponibles
         FROM Evento e
         LEFT JOIN Categoria c ON e.id_categoria = c.id_categoria
-        LEFT JOIN Zona_Boleto z ON e.id_evento = z.id_evento AND z.nombre_zona = 'General'
+        LEFT JOIN Zona_Boleto z ON e.id_evento = z.id_evento
         WHERE e.estado = 'activo'
+        GROUP BY e.id_evento, c.nombre_categoria
         ORDER BY e.fecha ASC, e.hora_inicio ASC
     ");
     $events = $stmtEvents->fetchAll();
@@ -29,123 +30,7 @@ try {
     <script src="../Assets/Js/home.js"></script>
     <title>Agora - Explorar Eventos</title>
     <link rel="shortcut icon" href="../Assets/img/logo.png" type="image/x-icon">
-    
-    <style>
-        .events-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            gap: 20px;
-            padding: 50px;
-            margin-top: -350px;
-        }
-        .event-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s;
-        }
-        .event-card:hover {
-            transform: translateY(-5px);
-        }
-        .card-image-placeholder {
-            height: 180px;
-            background-color: #4a5f8f;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .card-image-placeholder img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .card-content {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            flex-grow: 1;
-        }
-        .card-category {
-            font-size: 0.85rem;
-            color: #4a5f8f;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin: 0;
-        }
-        .card-title {
-            font-size: 1.4rem;
-            margin: 0;
-            color: #333;
-            font-weight: 700;
-        }
-        .card-description {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 10px;
-            flex-grow: 1;
-            line-height: 1.5;
-        }
-        .card-footer {
-            border-top: 1px solid #eee;
-            padding-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .card-date-time {
-            font-size: 0.8rem;
-            color: #555;
-            margin: 0;
-        }
-        .card-capacity {
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        .card-capacity.full {
-             color: #d32f2f;
-        }
-        .card-capacity.available {
-             color: #388e3c;
-        }
-        .card-button {
-            background-color: #4a5f8f;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            text-align: center;
-            transition: background-color 0.2s;
-            margin-top: 10px;
-            font-weight: 500;
-        }
-        .card-button:hover {
-            background-color: #3e5178;
-        }
-        .no-events-message {
-            text-align: center;
-            padding: 80px 20px;
-            color: #666;
-            grid-column: 1 / -1;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        @media (max-width: 600px) {
-            .events-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="../Assets/Styles/styles_events/events.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <div class="nav">

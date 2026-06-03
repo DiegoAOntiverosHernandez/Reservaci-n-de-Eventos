@@ -22,6 +22,7 @@ if (!$data) {
 $event_id = (int)($data['event_id'] ?? 0);
 $espacios = (int)($data['espacios'] ?? 0);
 $current_slots = (int)($data['current_slots'] ?? 0);
+$asientos_str = trim($data['asientos'] ?? '');
 $id_usuario = getCurrentUserId();
 
 if ($event_id <= 0 || $espacios <= 0) {
@@ -30,10 +31,29 @@ if ($event_id <= 0 || $espacios <= 0) {
 }
 
 try {
-    // 1. Obtener la zona de boletos del evento (típicamente General)
-    $stmt = $pdo->prepare("SELECT id_zona, precio, lugares_disponibles FROM Zona_Boleto WHERE id_evento = ? LIMIT 1");
-    $stmt->execute([$event_id]);
+    // 1. Obtener la zona de boletos específica para este evento y nombre de zona
+    $nombre_zona = 'General';
+    if (!empty($asientos_str)) {
+        $firstSeat = explode(',', $asientos_str)[0];
+        $prefix = substr(trim($firstSeat), 0, 1);
+        
+        if ($prefix === 'V') $nombre_zona = 'VIP';
+        elseif ($prefix === 'A') $nombre_zona = 'Zona A';
+        elseif ($prefix === 'B') $nombre_zona = 'Zona B';
+        elseif ($prefix === 'C') $nombre_zona = 'Zona C';
+        elseif ($prefix === 'D') $nombre_zona = 'Zona D';
+    }
+
+    $stmt = $pdo->prepare("SELECT id_zona, precio, lugares_disponibles FROM Zona_Boleto WHERE id_evento = ? AND nombre_zona = ? LIMIT 1");
+    $stmt->execute([$event_id, $nombre_zona]);
     $zona = $stmt->fetch();
+
+    if (!$zona) {
+        // Fallback si la zona específica no existe, obtener la primera disponible
+        $stmt = $pdo->prepare("SELECT id_zona, precio, lugares_disponibles FROM Zona_Boleto WHERE id_evento = ? LIMIT 1");
+        $stmt->execute([$event_id]);
+        $zona = $stmt->fetch();
+    }
 
     if (!$zona) {
         echo json_encode(['success' => false, 'message' => 'El evento seleccionado no cuenta con zonas de boletaje activas.']);
@@ -53,11 +73,35 @@ try {
         $prevRes = $stmtPrev->fetch();
 
         if ($prevRes) {
-            // Actualizar la reserva vieja a 'Cancelado'.
-            // Esto activará el Trigger trg_restaurar_lugares_cancelacion en MySQL que sumará
-            // los lugares previos devueltos al stock disponible.
-            $stmtCancel = $pdo->prepare("UPDATE Reservacion SET estado_reservacion = 'Cancelado' WHERE id_reservacion = ?");
-            $stmtCancel->execute([$prevRes['id_reservacion']]);
+            // Obtener espacios de la reservación anterior para restaurarlos en Zona_Boleto
+            $stmtResOld = $pdo->prepare("SELECT id_zona, espacios_reservados FROM Reservacion WHERE id_reservacion = ?");
+            $stmtResOld->execute([$prevRes['id_reservacion']]);
+            $resOld = $stmtResOld->fetch();
+            
+            if ($resOld) {
+                // Actualizar la reserva vieja a 'Cancelado'
+                $stmtCancel = $pdo->prepare("UPDATE Reservacion SET estado_reservacion = 'Cancelado' WHERE id_reservacion = ?");
+                $stmtCancel->execute([$prevRes['id_reservacion']]);
+                
+                // Cancelar boletos viejos en la tabla Boleto
+                $stmtCancelBoletos = $pdo->prepare("UPDATE Boleto SET estado_boleto = 'cancelado' WHERE id_reservacion = ?");
+                $stmtCancelBoletos->execute([$prevRes['id_reservacion']]);
+                
+                // Liberar asientos viejos asociados (cambiarlos a 'disponible')
+                $stmtGetAsientos = $pdo->prepare("SELECT id_asiento FROM Boleto WHERE id_reservacion = ? AND id_asiento IS NOT NULL");
+                $stmtGetAsientos->execute([$prevRes['id_reservacion']]);
+                $oldAsientos = $stmtGetAsientos->fetchAll(PDO::FETCH_COLUMN);
+                
+                if (!empty($oldAsientos)) {
+                    $inQuery = implode(',', array_fill(0, count($oldAsientos), '?'));
+                    $stmtFreeAsientos = $pdo->prepare("UPDATE Asiento SET estado = 'disponible' WHERE id_asiento IN ($inQuery)");
+                    $stmtFreeAsientos->execute($oldAsientos);
+                }
+                
+                // Sumar los lugares devueltos al stock disponible en Zona_Boleto
+                $stmtInc = $pdo->prepare("UPDATE Zona_Boleto SET lugares_disponibles = lugares_disponibles + ? WHERE id_zona = ?");
+                $stmtInc->execute([$resOld['espacios_reservados'], $resOld['id_zona']]);
+            }
         }
     }
 
@@ -95,9 +139,6 @@ try {
     $id_transaccion = $pdo->lastInsertId();
 
     // 5. Crear la nueva Reservación
-    // Al insertar, el Trigger trg_descontar_lugares_reservacion automáticamente:
-    // a. Descontará los espacios de Zona_Boleto.lugares_disponibles
-    // b. Generará los tickets individuales asociados en la tabla Boleto con códigos QR únicos.
     $stmtRes = $pdo->prepare("INSERT INTO Reservacion (id_usuario, id_zona, id_transaccion, espacios_reservados, estado_reservacion) VALUES (?, ?, ?, ?, 'Confirmado')");
     $stmtRes->execute([
         $id_usuario,
@@ -106,12 +147,67 @@ try {
         $espacios
     ]);
 
+    $id_reservacion = $pdo->lastInsertId();
+
+    // Lógica Manual de Trigger:
+    // a. Descontar los espacios de Zona_Boleto.lugares_disponibles
+    $stmtDec = $pdo->prepare("UPDATE Zona_Boleto SET lugares_disponibles = lugares_disponibles - ? WHERE id_zona = ?");
+    $stmtDec->execute([$espacios, $id_zona]);
+
+    // b. Generar los tickets individuales asociados en la tabla Boleto con códigos QR únicos.
+    $stmtInsertBoleto = $pdo->prepare("INSERT INTO Boleto (id_reservacion, codigo_unico, estado_boleto) VALUES (?, ?, 'valido')");
+    for ($i = 0; $i < $espacios; $i++) {
+        $codigo_unico = 'QR-' . $id_reservacion . '-' . time() . '-' . rand(100000, 999999);
+        $stmtInsertBoleto->execute([$id_reservacion, $codigo_unico]);
+    }
+
+    // 5b. Vincular asientos seleccionados reales a los boletos generados automáticamente
+    if (!empty($asientos_str)) {
+        $seats = array_map('trim', explode(',', $asientos_str));
+        
+        // Obtener los boletos recién insertados por el trigger
+        $stmtBoleto = $pdo->prepare("SELECT id_boleto FROM Boleto WHERE id_reservacion = ? ORDER BY id_boleto ASC");
+        $stmtBoleto->execute([$id_reservacion]);
+        $boletos = $stmtBoleto->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($seats as $index => $seat) {
+            if (empty($seat)) continue;
+            
+            // Separar fila (letra) y número
+            $fila = substr($seat, 0, 1);
+            $numero = substr($seat, 1);
+
+            // Buscar si el asiento ya existe
+            $stmtCheck = $pdo->prepare("SELECT id_asiento FROM Asiento WHERE id_zona = ? AND fila = ? AND numero = ? LIMIT 1");
+            $stmtCheck->execute([$id_zona, $fila, $numero]);
+            $asiento = $stmtCheck->fetch();
+
+            if ($asiento) {
+                $id_asiento = $asiento['id_asiento'];
+                $stmtUpdateAsiento = $pdo->prepare("UPDATE Asiento SET estado = 'ocupado' WHERE id_asiento = ?");
+                $stmtUpdateAsiento->execute([$id_asiento]);
+            } else {
+                $stmtInsertAsiento = $pdo->prepare("INSERT INTO Asiento (id_zona, fila, numero, estado) VALUES (?, ?, ?, 'ocupado')");
+                $stmtInsertAsiento->execute([$id_zona, $fila, $numero]);
+                $id_asiento = $pdo->lastInsertId();
+            }
+
+            // Si hay un boleto generado disponible, vincularlo al asiento
+            if (isset($boletos[$index])) {
+                $id_boleto = $boletos[$index]['id_boleto'];
+                $stmtLink = $pdo->prepare("UPDATE Boleto SET id_asiento = ? WHERE id_boleto = ?");
+                $stmtLink->execute([$id_asiento, $id_boleto]);
+            }
+        }
+    }
+
     $pdo->commit();
 
     $message = $current_slots > 0 ? '¡Tu reservación ha sido actualizada con éxito!' : '¡Reservación realizada con éxito!';
     echo json_encode([
         'success' => true,
-        'message' => $message
+        'message' => $message,
+        'id_reservacion' => $id_reservacion
     ]);
 
 } catch (\Exception $e) {

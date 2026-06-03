@@ -1,0 +1,314 @@
+body {
+    background-color: #f3f4f6;
+    font-family: 'Outfit', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #1e293b;
+}
+
+.nav {
+    background-color: #1e293b;
+    padding: 20px 70px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Contenedor Principal */
+.select-container {
+    max-width: 1050px;
+    margin: 40px auto;
+    background-color: #e5e7eb; /* Fondo gris claro idéntico */
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    border: 1px solid #cbd5e1;
+}
+
+.select-header {
+    text-align: left;
+    margin-bottom: 30px;
+}
+
+.select-header h2 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.select-header p {
+    color: #4b5563;
+    font-size: 1.05rem;
+    margin: 0;
+}
+
+/* Layout 2 columnas */
+.layout-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1.1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+/* Columna Izquierda: Mapa */
+.map-card-wrapper {
+    background-color: white;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    border: 1px solid #d1d5db;
+}
+
+.stadium-map-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 25px;
+}
+
+.stadium-svg {
+    width: 100%;
+    max-width: 480px;
+    height: auto;
+}
+
+/* Estilos de interactividad de los asientos */
+.seat {
+    cursor: pointer;
+    transition: fill 0.2s, stroke-width 0.2s;
+}
+
+.seat:hover:not(.sold):not(.not-available) {
+    stroke: #000000;
+    stroke-width: 1.5px;
+}
+
+/* Estados de Asientos */
+.seat.sold {
+    fill: #ef4444 !important; /* Vendido: Rojo */
+    cursor: not-allowed;
+}
+
+.seat.selected {
+    fill: #f59e0b !important; /* Tu asiento: Amarillo/Dorado */
+}
+
+.seat.not-available {
+    fill: #9ca3af !important; /* No disponible: Gris */
+    cursor: not-allowed;
+}
+
+/* Leyenda inferior del mapa */
+.stadium-legend-bar {
+    background-color: #384260;
+    border-radius: 10px;
+    padding: 18px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    color: white;
+    font-size: 0.72rem;
+    text-align: left;
+}
+
+.legend-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.legend-dot-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 0.78rem;
+}
+
+.legend-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.legend-desc {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.65rem;
+    line-height: 1.3;
+}
+
+/* Columna Derecha: Sidebar de Selección */
+.selection-sidebar {
+    background-color: #384260; /* Azul oscuro */
+    border-radius: 16px;
+    padding: 30px;
+    color: white;
+    box-shadow: 0 8px 24px rgba(56, 66, 96, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Header de la Selección */
+.selection-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    padding-bottom: 12px;
+}
+
+.selection-header-row h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.selection-count {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+/* Statuses list */
+.status-legend-sidebar {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.status-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.status-legend-box {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+/* Contenedor del listado seleccionado */
+.selected-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 150px;
+}
+
+/* Fila de asiento seleccionado */
+.selected-seat-card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #1e293b;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.seat-name-price {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.seat-code {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.seat-zone-price {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.btn-delete-seat {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-delete-seat:hover {
+    background-color: #dc2626;
+}
+
+/* Fila del Total */
+.total-row {
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.total-label {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.total-value {
+    font-size: 1.45rem;
+    font-weight: 800;
+}
+
+/* Botón de Reservar */
+.btn-reserve {
+    background-color: #00b347; /* Verde idéntico */
+    color: white;
+    padding: 16px 20px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    width: 100%;
+    box-shadow: 0 4px 15px rgba(0,179,71,0.2);
+    margin-top: 10px;
+}
+
+.btn-reserve:hover {
+    background-color: #00993c;
+    transform: translateY(-1px);
+}
+
+.btn-reserve:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+@media (max-width: 900px) {
+    .layout-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Bloqueo de asientos en zonas cruzadas --- */
+.seat.disabled-zone {
+    opacity: 0.25 !important;
+    fill: #9ca3af !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}

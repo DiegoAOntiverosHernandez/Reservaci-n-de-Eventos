@@ -1,4 +1,13 @@
 <?php
+/**
+ * Sistema Agora - Gestión de Reservación de Eventos
+ *
+ * @category   Authentication
+ * @package    Agora_Core
+ * @author     Equipo de Desarrollo Agora
+ * @description Funciones globales de autenticación, control de sesiones y control de acceso basado en roles.
+ */
+
 require_once __DIR__ . '/db.php';
 
 /**
@@ -6,7 +15,8 @@ require_once __DIR__ . '/db.php';
  * 
  * @return bool
  */
-function isLoggedIn() {
+function isLoggedIn()
+{
     return isset($_SESSION['usuario_id']);
 }
 
@@ -15,7 +25,8 @@ function isLoggedIn() {
  * 
  * @return int|null
  */
-function getCurrentUserId() {
+function getCurrentUserId()
+{
     return isset($_SESSION['usuario_id']) ? (int)$_SESSION['usuario_id'] : null;
 }
 
@@ -24,7 +35,8 @@ function getCurrentUserId() {
  * 
  * @return array|null
  */
-function getCurrentUser() {
+function getCurrentUser()
+{
     if (!isLoggedIn()) {
         return null;
     }
@@ -40,7 +52,8 @@ function getCurrentUser() {
  * Exige que el usuario haya iniciado sesión para acceder.
  * Si no está logueado, redirige a la landing page o devuelve un error JSON según sea el caso.
  */
-function requireLogin() {
+function requireLogin()
+{
     if (!isLoggedIn()) {
         $acceptJson = false;
         if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
@@ -70,7 +83,8 @@ function requireLogin() {
  * 
  * @param string|array $requiredRoles Rol o lista de roles requeridos.
  */
-function requireRole($requiredRoles) {
+function requireRole($requiredRoles)
+{
     requireLogin();
     
     $userRole = $_SESSION['usuario_rol'];

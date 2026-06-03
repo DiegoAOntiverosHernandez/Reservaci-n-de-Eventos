@@ -24,9 +24,11 @@ $categoria = trim($data['categoria'] ?? '');
 $descripcion = trim($data['descripcion'] ?? '');
 $fecha = trim($data['fecha'] ?? '');
 $hora_inicio = trim($data['hora_inicio'] ?? '');
+$hora_cierre_req = trim($data['hora_cierre'] ?? '');
 $capacidad = (int)($data['capacidad'] ?? 0);
 $ubicacion = trim($data['ubicacion'] ?? 'Recinto Principal Ágora');
 $itinerario = $data['itinerario'] ?? [];
+$imagen_base64 = $data['imagen_base64'] ?? null;
 $id_organizador = getCurrentUserId();
 
 // Validaciones básicas
@@ -50,8 +52,8 @@ if (empty($hora_inicio)) {
     exit;
 }
 
-if ($capacidad <= 0 || $capacidad > 30) {
-    echo json_encode(['success' => false, 'message' => 'La capacidad debe ser un número entre 1 y 30.']);
+if ($capacidad <= 0 || $capacidad > 500) {
+    echo json_encode(['success' => false, 'message' => 'La capacidad debe ser un número entre 1 y 500.']);
     exit;
 }
 
@@ -62,13 +64,22 @@ if (empty($ubicacion)) {
 
 try {
     // 1. Mapear categoría a base de datos
-    $catName = ucfirst(strtolower($categoria));
-    if ($catName === 'Deporte') {
-        $catName = 'Evento deportivo';
-    } elseif ($catName === 'Arte') {
+    $catName = '';
+    $lowerCat = strtolower($categoria);
+    if (strpos($lowerCat, 'concierto') !== false) {
+        $catName = 'Concierto';
+    } elseif (strpos($lowerCat, 'teatro') !== false || strpos($lowerCat, 'obra') !== false || strpos($lowerCat, 'arte') !== false) {
         $catName = 'Obra de teatro';
-    } elseif ($catName === 'Boda' || $catName === 'Salon' || $catName === 'Salón') {
+    } elseif (strpos($lowerCat, 'conferencia') !== false) {
+        $catName = 'Conferencia';
+    } elseif (strpos($lowerCat, 'festival') !== false) {
+        $catName = 'Festival';
+    } elseif (strpos($lowerCat, 'social') !== false || strpos($lowerCat, 'boda') !== false || strpos($lowerCat, 'salon') !== false || strpos($lowerCat, 'salón') !== false) {
         $catName = 'Evento social';
+    } elseif (strpos($lowerCat, 'deporte') !== false || strpos($lowerCat, 'deportivo') !== false) {
+        $catName = 'Evento deportivo';
+    } else {
+        $catName = ucfirst($lowerCat);
     }
 
     $stmt = $pdo->prepare("SELECT id_categoria FROM Categoria WHERE nombre_categoria = ?");
@@ -100,16 +111,49 @@ try {
         $imagen_banner = 'Assets/img/tag_salon.png';
     }
 
-    // 3. Asignar Recinto (opcional, por defecto NULL o 4 - Plaza Pública del Sol)
-    // El script tiene 'Plaza Pública del Sol' en la posición 4
-    $id_recinto = 4;
+    // 3. Asignar Recinto dinámicamente según la categoría
+    $id_recinto = 4; // Plaza Pública (General) por defecto
+    if (strpos($lowerCat, 'concierto') !== false || strpos($lowerCat, 'deporte') !== false || strpos($lowerCat, 'deportivo') !== false) {
+        $id_recinto = 2; // Estadio Olímpico Ágora (estadio)
+    } elseif (strpos($lowerCat, 'teatro') !== false || strpos($lowerCat, 'obra') !== false || strpos($lowerCat, 'arte') !== false) {
+        $id_recinto = 1; // Teatro Ágora Principal (teatro)
+    } elseif (strpos($lowerCat, 'conferencia') !== false) {
+        $id_recinto = 3; // Sala de Conferencias Ágora (conferencia)
+    }
 
-    // Calcular hora de cierre (por defecto 3 horas después del inicio)
-    $time = strtotime($hora_inicio);
-    $hora_cierre = date('H:i:s', $time + 3 * 3600);
+    // Calcular hora de cierre
+    if (!empty($hora_cierre_req)) {
+        $hora_cierre = $hora_cierre_req;
+    } else {
+        $time = strtotime($hora_inicio);
+        $hora_cierre = date('H:i:s', $time + 3 * 3600);
+    }
+
+    // Si hay una imagen en base64 cargada, la guardamos
+    if (!empty($imagen_base64) && strpos($imagen_base64, 'data:image') === 0) {
+        try {
+            $parts = explode(',', $imagen_base64);
+            $imgData = base64_decode($parts[1]);
+            $uploadDir = __DIR__ . '/../Assets/img/uploads/';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            $fileName = 'event_' . uniqid() . '.png';
+            file_put_contents($uploadDir . $fileName, $imgData);
+            $imagen_banner = 'Assets/img/uploads/' . $fileName;
+        } catch (\Exception $exImg) {
+            // Ignorar y mantener imagen por defecto si falla
+        }
+    }
 
     // Iniciar transacción de base de datos para inserción segura de múltiples tablas
     $pdo->beginTransaction();
+
+    // Verificar si es su primer evento antes de insertarlo
+    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM Evento WHERE id_organizador = ?");
+    $stmtCount->execute([$id_organizador]);
+    $eventCount = (int)$stmtCount->fetchColumn();
+    $isFirstEvent = ($eventCount === 0);
 
     // 4. Insertar el Evento
     $stmt = $pdo->prepare("INSERT INTO Evento (nombre_evento, descripcion, imagen_banner, ubicacion, id_recinto, fecha, hora_inicio, hora_cierre, capacidad_total, estado, id_organizador, id_categoria) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'activo', ?, ?)");
@@ -128,10 +172,8 @@ try {
     
     $id_evento = $pdo->lastInsertId();
 
-    // 5. Insertar Zona de Boleto (General) con precio gratuito
-    // Al insertar la zona, el trigger trg_actualizar_capacidad_insert actualizará automáticamente capacidad_total en la tabla Evento
-    $stmt = $pdo->prepare("INSERT INTO Zona_Boleto (id_evento, nombre_zona, precio, lugares_totales, lugares_disponibles) VALUES (?, 'General', 0.00, ?, ?)");
-    $stmt->execute([$id_evento, $capacidad, $capacidad]);
+    // 5. El Administrador establecerá las 5 zonas en el Paso 2 (organizar_recinto.php).
+    // No insertamos la zona general predeterminada.
 
     // 6. Insertar secciones de itinerario si las hay
     if (!empty($itinerario) && is_array($itinerario)) {
@@ -148,12 +190,20 @@ try {
         }
     }
 
+    // Si es su primer evento, promover su rol a 'organizador' en la BD y actualizar la sesión activa
+    if ($isFirstEvent) {
+        $stmtUpdateRole = $pdo->prepare("UPDATE Usuario SET rol = 'organizador' WHERE id_usuario = ?");
+        $stmtUpdateRole->execute([$id_organizador]);
+        $_SESSION['usuario_rol'] = 'organizador';
+    }
+
     $pdo->commit();
 
     echo json_encode([
         'success' => true,
         'message' => '¡Evento publicado exitosamente!',
-        'id_evento' => $id_evento
+        'id_evento' => $id_evento,
+        'is_first_event' => $isFirstEvent
     ]);
 
 } catch (\Exception $e) {

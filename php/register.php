@@ -1,4 +1,13 @@
 <?php
+/**
+ * Sistema Agora - Gestión de Reservación de Eventos
+ *
+ * @category   Controllers
+ * @package    Agora_Core
+ * @author     Equipo de Desarrollo Agora
+ * @description API que procesa el registro asíncrono de nuevos usuarios clientes en la plataforma.
+ */
+
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/db.php';
 
@@ -37,7 +46,7 @@ if (strlen($password) < 6) {
 }
 
 try {
-    // Verificar si el correo ya está registrado
+    // Verificar si el correo ya está registrado (evitando inyecciones SQL con PDO)
     $stmt = $pdo->prepare("SELECT id_usuario FROM Usuario WHERE correo_electronico = ?");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
@@ -45,12 +54,10 @@ try {
         exit;
     }
 
-    // Cifrar la contraseña
+    // Cifrar la contraseña de forma segura
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
     // Insertar el nuevo usuario (rol por defecto 'cliente')
-    // Nota: Si deseamos permitir registrarse como 'organizador' directamente, se podría añadir un campo, pero
-    // por defecto se crea como 'cliente' según la interfaz de registro normal.
     $stmt = $pdo->prepare("INSERT INTO Usuario (nombre, correo_electronico, contrasena, rol) VALUES (?, ?, ?, 'cliente')");
     $stmt->execute([$nombre, $email, $passwordHash]);
 
