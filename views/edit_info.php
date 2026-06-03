@@ -33,15 +33,7 @@ requireLogin();
                         <a href="mi_evento.php">Mis eventos</a>
                     </div>
                 </li>
-                <li class="menu">
-                    <button id="btn" class="menu-btn" aria-haspopup="true" aria-expanded="false">
-                        Reservaciones ▾
-                    </button>
-                    <div class="menu-content">
-                        <a href="reservar.php">Reservar evento</a>
-                        <a href="historial_r.php">Historial de reservaciones</a>
-                    </div>
-                </li>
+                <li><button class="menu-btn"><a href="historial_r.php">Historial de reservaciones</a></button></li>
                 <li><button class="menu-btn"><a href="calendario.php">Calendario</a></button></li>
                 
                 <li>

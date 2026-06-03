@@ -1,22 +1,157 @@
+/* Estilos Premium para la Página de Eventos - Agora */
+body {
+    background-color: #f3f4f6;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #1e293b;
+}
+
+/* Contenedor Principal */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    width: 100%;
+    flex: 1;
+}
+
+/* Sección Hero Premium */
+.hero-banner {
+    background-color: #1a1b24;
+    border-radius: 20px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    min-height: 240px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    position: relative;
+}
+
+.hero-content {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: white;
+    text-align: left;
+    z-index: 5;
+}
+
+.hero-content h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 0 0 12px 0;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+}
+
+.hero-content p {
+    font-size: 1.05rem;
+    color: #94a3b8;
+    margin: 0 0 25px 0;
+    line-height: 1.5;
+}
+
+.hero-btn {
+    align-self: flex-start;
+    background-color: #d97706;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
+}
+
+.hero-btn:hover {
+    background-color: #b45309;
+    transform: translateY(-1px);
+}
+
+/* Panel de Imágenes del Hero */
+.hero-images-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    padding: 15px;
+    height: 100%;
+    align-items: center;
+}
+
+.hero-img-box {
+    height: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.hero-img-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+
+.hero-img-box:hover img {
+    transform: scale(1.08);
+}
+
+/* Encabezado del Tablero */
+.dashboard-header {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 15px;
+}
+
+.dashboard-header h2 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 5px 0;
+}
+
+.dashboard-header p {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* Grid de Eventos */
 .events-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 20px;
-    padding: 50px;
-    margin-top: -350px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    padding: 20px 0;
+    margin-top: 0;
 }
+
 .event-card {
     background: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
+
 .event-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
+
 .card-image-placeholder {
     height: 180px;
     background-color: #4a5f8f;
@@ -26,88 +161,125 @@
     justify-content: center;
     overflow: hidden;
 }
+
 .card-image-placeholder img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
+
 .card-content {
-    padding: 15px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     flex-grow: 1;
+    text-align: left;
 }
+
 .card-category {
-    font-size: 0.85rem;
-    color: #4a5f8f;
-    font-weight: 600;
+    font-size: 0.8rem;
+    color: #b45309;
+    font-weight: 700;
     text-transform: uppercase;
     margin: 0;
+    letter-spacing: 0.5px;
 }
+
 .card-title {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     margin: 0;
-    color: #333;
-    font-weight: 700;
+    color: #0f172a;
+    font-weight: 800;
+    line-height: 1.25;
 }
+
 .card-description {
     font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 10px;
+    color: #64748b;
+    margin: 0;
     flex-grow: 1;
     line-height: 1.5;
 }
+
 .card-footer {
-    border-top: 1px solid #eee;
-    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: 8px;
 }
+
 .card-date-time {
-    font-size: 0.8rem;
-    color: #555;
-    margin: 0;
-}
-.card-capacity {
     font-size: 0.85rem;
-    font-weight: 600;
+    color: #475569;
     margin: 0;
+    line-height: 1.4;
 }
+
+.card-date-time strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.card-capacity {
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
 .card-capacity.full {
-     color: #d32f2f;
+    color: #b91c1c;
+    background-color: #fee2e2;
 }
+
 .card-capacity.available {
-     color: #388e3c;
+    color: #15803d;
+    background-color: #dcfce7;
 }
+
 .card-button {
     background-color: #4a5f8f;
     color: white;
     padding: 10px 15px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     text-decoration: none;
     text-align: center;
     transition: background-color 0.2s;
-    margin-top: 10px;
-    font-weight: 500;
+    margin-top: 5px;
+    font-weight: 700;
+    font-size: 0.92rem;
 }
+
 .card-button:hover {
-    background-color: #3e5178;
+    background-color: #3b4e78;
 }
+
 .no-events-message {
     text-align: center;
-    padding: 80px 20px;
-    color: #666;
+    padding: 60px 20px;
+    color: #64748b;
     grid-column: 1 / -1;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    border: 1px solid #cbd5e1;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 800px) {
+    .hero-banner {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero-images-grid {
+        display: none;
+    }
+    
     .events-grid {
         grid-template-columns: 1fr;
     }

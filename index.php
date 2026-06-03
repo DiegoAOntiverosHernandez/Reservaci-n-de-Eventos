@@ -678,15 +678,7 @@ try {
                         <a href="views/mi_evento.php">Mis eventos</a>
                     </div>
                 </li>
-                <li class="menu">
-                    <button id="btn" class="menu-btn" aria-haspopup="true" aria-expanded="false">
-                        Reservaciones ▾
-                    </button>
-                    <div class="menu-content">
-                        <a href="views/reservar.php">Reservar evento</a>
-                        <a href="views/historial_r.php">Historial de reservaciones</a>
-                    </div>
-                </li>
+                <li><button class="menu-btn"><a href="views/historial_r.php">Historial de reservaciones</a></button></li>
                 <li><button class="menu-btn"><a href="views/calendario.php">Calendario</a></button></li>
                 
                 <?php if (isLoggedIn()): ?>

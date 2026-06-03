@@ -44,6 +44,8 @@ try {
             $status = 'cancelled';
         } elseif ($date < $today) {
             $status = 'passed';
+        } elseif ($date === $today) {
+            $status = 'ongoing';
         } elseif ((int)$ev['cap_disponible'] <= 0) {
             $status = 'full';
         }
@@ -71,11 +73,9 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/nav_footer.css">
-    <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/home_welcom.css">
-    <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/home_events.css">
-    <link rel="stylesheet" type="text/css" href="../Assets/Styles/styles_events/events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="../Assets/Js/home.js"></script>
-    <link rel="stylesheet" type="text/css" href="../Assets/Styles/styles_events/calendario.css">
+    <link rel="stylesheet" type="text/css" href="../Assets/Styles/styles_events/calendario.css?v=<?php echo time(); ?>">
     <title>Agora - Calendario</title>
     <link rel="shortcut icon" href="../Assets/img/logo.png" type="image/x-icon">
 </head>
@@ -94,15 +94,7 @@ try {
                         <a href="mi_evento.php">Mis eventos</a>
                     </div>
                 </li>
-                <li class="menu">
-                    <button id="btn" class="menu-btn" aria-haspopup="true" aria-expanded="false">
-                        Reservaciones ▾
-                    </button>
-                    <div class="menu-content">
-                        <a href="reservar.php">Reservar evento</a>
-                        <a href="historial_r.php">Historial de reservaciones</a>
-                    </div>
-                </li>
+                <li><button class="menu-btn"><a href="historial_r.php">Historial de reservaciones</a></button></li>
                 <li><button class="menu-btn"><a href="calendario.php">Calendario</a></button></li>
                 
                 <li>
@@ -132,16 +124,12 @@ try {
             </div>
 
             <div class="month-navigation">
-                <button class="nav-btn" id="prev-month">
-                    <span>‹</span> Mes anterior
-                </button>
+                <button class="nav-btn" id="prev-month">‹</button>
                 <div class="current-month" id="current-month"></div>
-                <button class="nav-btn" id="next-month">
-                    Mes siguiente <span>›</span>
-                </button>
+                <button class="nav-btn" id="next-month">›</button>
             </div>
 
-            <div class="calendar-grid">
+            <div class="calendar-grid" id="calendar-grid">
                 <div class="weekday-header">Domingo</div>
                 <div class="weekday-header">Lunes</div>
                 <div class="weekday-header">Martes</div>
@@ -149,28 +137,36 @@ try {
                 <div class="weekday-header">Jueves</div>
                 <div class="weekday-header">Viernes</div>
                 <div class="weekday-header">Sábado</div>
-
-                <div id="calendar-days"></div>
             </div>
         </div>
 
-        <aside class="legend">
-            <h3>Leyenda</h3>
-            <div class="legend-item">
-                <span class="legend-color available"></span>
-                <span>Evento disponible (Activo)</span>
+        <aside class="legend-sidebar">
+            <div class="legend-box">
+                <h3>Leyenda</h3>
+                <div class="legend-item">
+                    <span class="legend-color available"></span>
+                    <span>Evento activo</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color ongoing"></span>
+                    <span>Evento en curso</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color full"></span>
+                    <span>Evento lleno</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color passed"></span>
+                    <span>Evento finalizado</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color cancelled"></span>
+                    <span>Evento cancelado</span>
+                </div>
             </div>
-            <div class="legend-item">
-                <span class="legend-color full"></span>
-                <span>Evento lleno</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color passed"></span>
-                <span>Evento pasado</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color cancelled"></span>
-                <span>Evento cancelado</span>
+            
+            <div class="ad-box">
+                <img src="../Assets/img/publicidad.png" alt="¡Recibe notificaciones de tus reservaciones!">
             </div>
         </aside>
     </div>
@@ -220,13 +216,17 @@ try {
         }
 
         function updateMonthDisplay() {
-            const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
             document.getElementById('current-month').textContent = `${months[currentMonth]}, ${currentYear}`;
         }
 
         function renderCalendar() {
-            const calendarDays = document.getElementById('calendar-days');
-            calendarDays.innerHTML = '';
+            const calendarGrid = document.getElementById('calendar-grid');
+            
+            // Limpiar celdas previas manteniendo los 7 encabezados de los días
+            while (calendarGrid.children.length > 7) {
+                calendarGrid.removeChild(calendarGrid.lastChild);
+            }
 
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -235,11 +235,13 @@ try {
             const today = new Date();
             const isCurrentMonth = today.getMonth() === currentMonth && today.getFullYear() === currentYear;
 
+            // Días del mes anterior
             for (let i = firstDay - 1; i >= 0; i--) {
                 const dayCell = createDayCell(daysInPrevMonth - i, true);
-                calendarDays.appendChild(dayCell);
+                calendarGrid.appendChild(dayCell);
             }
 
+            // Días del mes actual
             for (let day = 1; day <= daysInMonth; day++) {
                 const isToday = isCurrentMonth && day === today.getDate();
                 const dayCell = createDayCell(day, false, isToday);
@@ -267,15 +269,16 @@ try {
                     dayCell.appendChild(eventEl);
                 });
                 
-                calendarDays.appendChild(dayCell);
+                calendarGrid.appendChild(dayCell);
             }
 
-            const totalCells = calendarDays.children.length;
+            // Días del mes siguiente
+            const totalCells = calendarGrid.children.length - 7;
             const remainingCells = 42 - totalCells; 
-            if(remainingCells < 7) { 
+            if (remainingCells < 7) { 
                 for (let day = 1; day <= remainingCells; day++) {
                     const dayCell = createDayCell(day, true);
-                    calendarDays.appendChild(dayCell);
+                    calendarGrid.appendChild(dayCell);
                 }
             }
         }
@@ -303,6 +306,7 @@ try {
             
             const statusText = {
                 available: 'Disponible',
+                ongoing: 'En curso',
                 full: 'Lleno',
                 passed: 'Pasado',
                 cancelled: 'Cancelado'
@@ -331,7 +335,7 @@ try {
                 </div>
                 <div class="event-detail" style="margin-bottom: 18px;">
                     <strong>Estado del Evento:</strong>
-                    <span style="font-weight: bold; color: ${event.status === 'available' ? 'green' : 'red'}">${statusText[event.status] || event.status}</span>
+                    <span style="font-weight: bold; color: ${event.status === 'available' || event.status === 'ongoing' ? 'green' : 'red'}">${statusText[event.status] || event.status}</span>
                 </div>
                 ${event.status === 'available' ? `<a href="reservar.php?event_id=${event.id}" class="card-button" style="text-align: center; display: block; text-decoration: none; margin-top: 10px;">Reservar ahora</a>` : ''}
             `;

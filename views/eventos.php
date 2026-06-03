@@ -25,8 +25,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/nav_footer.css">
-    <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/home_welcom.css">
-    <link rel="stylesheet" type="text/css" href="../Assets/Styles/home_styles/home_events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="../Assets/Js/home.js"></script>
     <title>Agora - Explorar Eventos</title>
     <link rel="shortcut icon" href="../Assets/img/logo.png" type="image/x-icon">
@@ -47,15 +46,7 @@ try {
                         <a href="mi_evento.php">Mis eventos</a>
                     </div>
                 </li>
-                <li class="menu">
-                    <button id="btn" class="menu-btn" aria-haspopup="true" aria-expanded="false">
-                        Reservaciones ▾
-                    </button>
-                    <div class="menu-content">
-                        <a href="reservar.php">Reservar evento</a>
-                        <a href="historial_r.php">Historial de reservaciones</a>
-                    </div>
-                </li>
+                <li><button class="menu-btn"><a href="historial_r.php">Historial de reservaciones</a></button></li>
                 <li><button class="menu-btn"><a href="calendario.php">Calendario</a></button></li>
                 
                 <?php if (isLoggedIn()): ?>
@@ -69,32 +60,33 @@ try {
         </nav>
     </div>
 
-    <section class="info_main_e">
-        <div class="info_e">
-            <div class="cont_img_e">
-                <img src="../Assets/img/img_home_2.png" alt="Agora">
-                <div class="info_img_e">
-                    <h1>Tu Escenario, Tu Evento.</h1>
-                    <p>Encuentra, crea y gestiona eventos que inspiran.</p>
-                    <ul>
-                        <li>Descubre y asiste: Conciertos, conferencias, bodas y más.</li>
-                        <li>Crea en minutos: Arma tu propio evento fácilmente.</li>
-                        <li>Gestión amigable: Gestiona y administra tus eventos.</li>
-                    </ul>
-                    <div class="buttons">
-                        <a href="crear_evento.php" class="button_1">Empieza a crear tu evento ahora</a>
-                    </div>
+    <div class="container">
+        <!-- Banner Hero Fotográfico Collages -->
+        <div class="hero-banner">
+            <div class="hero-content">
+                <h2>Tu escenario, tu evento.</h2>
+                <p>Encuentra, crea y gestiona eventos que inspiran y conectan comunidades.</p>
+                <a href="crear_evento.php" class="hero-btn">Empieza a crear tu evento ahora</a>
+            </div>
+            <div class="hero-images-grid">
+                <div class="hero-img-box">
+                    <img src="../Assets/img/imgconcierto.jpg" alt="Concierto">
+                </div>
+                <div class="hero-img-box">
+                    <img src="../Assets/img/imgdeporte.jpg" alt="Deporte">
+                </div>
+                <div class="hero-img-box">
+                    <img src="../Assets/img/imgconferencia.jpg" alt="Conferencia">
                 </div>
             </div>
         </div>
-    </section>
-    
-    <section class="info_main_2e">
-        <h2>Explora y reserva el evento ideal</h2>
-        <p>¡Encuentra el evento perfecto para ti!</p>
-    </section>
-    
-    <div class="container">
+        
+        <!-- Encabezado del Tablero -->
+        <div class="dashboard-header">
+            <h2>Explora y reserva el evento ideal</h2>
+            <p>¡Encuentra el evento perfecto para ti!</p>
+        </div>
+        
         <div class="events-grid">
             <?php if (empty($events)): ?>
                 <div class="no-events-message">
