@@ -42,6 +42,7 @@ try {
     }
 
     $asientos_str = isset($_GET['asientos']) ? trim($_GET['asientos']) : '';
+    $lock_token = isset($_GET['lock_token']) ? trim($_GET['lock_token']) : '';
 
     if (!empty($asientos_str)) {
         // Obtener zona a partir de los prefijos de los asientos elegidos: V (VIP), A (Zona A), B (Zona B), C (Zona C), D (Zona D)
@@ -159,7 +160,7 @@ try {
             </div>
 
             <div class="button-group">
-                <a href="pagar.php?event_id=<?php echo $event_id; ?>&espacios=<?php echo $espacios; ?>&current_slots=<?php echo $current_slots; ?>&asientos=<?php echo urlencode($asientos_str); ?>" class="btn-action btn-confirm">Confirmar y pagar</a>
+                <a href="pagar.php?event_id=<?php echo $event_id; ?>&espacios=<?php echo $espacios; ?>&current_slots=<?php echo $current_slots; ?>&asientos=<?php echo urlencode($asientos_str); ?>&lock_token=<?php echo urlencode($lock_token); ?>" class="btn-action btn-confirm">Confirmar y pagar</a>
                 <a href="reservar.php?event_id=<?php echo $event_id; ?>" class="btn-action btn-cancel">Cancelar</a>
             </div>
         </div>

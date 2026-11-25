@@ -493,7 +493,10 @@ try {
         .seat.blocked {
             fill: #9ca3af !important;
             cursor: not-allowed !important;
-            opacity: 0.4 !important;
+            opacity: 0.55 !important;
+            pointer-events: auto !important;
+            stroke: #4b5563 !important;
+            stroke-width: 1px !important;
         }
     </style>
 </head>
@@ -669,23 +672,128 @@ try {
         </footer>
     </div>
 
-    <!-- Script del Mapa Interactivo -->
+    <!-- Script del Mapa Interactivo con Bloqueo en Tiempo Real entre Ventanas (F1) -->
     <script>
-        const maxSeats = <?php echo $espacios; ?>;
+        const eventId = <?php echo (int)$event_id; ?>;
+        const maxSeats = <?php echo (int)$espacios; ?>;
         const selectedSeats = new Map(); // Guarda {seatId => {zone, price}}
         let lockedZone = null;
+
+        // Generar un token único por pestaña/ventana (incluso dentro del mismo navegador)
+        if (!window.name || !window.name.startsWith('agora_tab_')) {
+            window.name = 'agora_tab_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now();
+        }
+        const clientLockToken = window.name;
+
+        // Aplicar en el mapa SVG los asientos vendidos (rojo) y los bloqueados por otra ventana (gris)
+        function applyRemoteSeatStatus(soldList, blockedList) {
+            const soldSet = new Set(soldList || []);
+            const blockedSet = new Set(blockedList || []);
+            let removedAny = false;
+
+            document.querySelectorAll('.seat').forEach(seat => {
+                const id = seat.getAttribute('data-id');
+
+                if (soldSet.has(id)) {
+                    seat.classList.remove('available', 'selected', 'blocked');
+                    seat.classList.add('sold');
+                    seat.setAttribute('fill', '#ef4444');
+                    if (selectedSeats.has(id)) {
+                        selectedSeats.delete(id);
+                        removedAny = true;
+                    }
+                } else if (blockedSet.has(id)) {
+                    // Bloqueado en tiempo real por otra persona (ej. Susana)
+                    seat.classList.remove('available', 'selected');
+                    seat.classList.add('blocked');
+                    if (selectedSeats.has(id)) {
+                        selectedSeats.delete(id);
+                        removedAny = true;
+                    }
+                } else {
+                    // Si antes estaba bloqueado por otro y ya lo soltó, restaurarlo a disponible
+                    if (seat.classList.contains('blocked')) {
+                        seat.classList.remove('blocked');
+                        if (!selectedSeats.has(id)) {
+                            seat.classList.add('available');
+                        }
+                    }
+                }
+            });
+
+            if (removedAny) {
+                if (selectedSeats.size === 0) {
+                    lockedZone = null;
+                }
+                refreshZoneDisableState();
+                updateSidebar();
+            }
+        }
+
+        function refreshZoneDisableState() {
+            if (selectedSeats.size === 0) {
+                lockedZone = null;
+                document.querySelectorAll('.seat').forEach(s => {
+                    if (!s.classList.contains('blocked') && !s.classList.contains('sold')) {
+                        s.classList.remove('disabled-zone');
+                    }
+                });
+            } else {
+                document.querySelectorAll('.seat').forEach(s => {
+                    if (s.getAttribute('data-zone') !== lockedZone) {
+                        s.classList.add('disabled-zone');
+                    } else if (!s.classList.contains('blocked') && !s.classList.contains('sold')) {
+                        s.classList.remove('disabled-zone');
+                    }
+                });
+            }
+        }
+
+        async function syncSeatStatus() {
+            try {
+                const res = await fetch(`../php/seat_lock.php?action=status&event_id=${eventId}&token=${encodeURIComponent(clientLockToken)}`, {
+                    cache: 'no-store'
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.success) {
+                    applyRemoteSeatStatus(data.sold, data.blocked);
+                }
+            } catch (e) {
+                // Ignorar error de red transitorio en polling
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const seats = document.querySelectorAll('.seat');
 
+            // Liberar bloqueos previos de esta misma pestaña al cargar mapa limpio
+            fetch('../php/seat_lock.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'unlock_all', event_id: eventId, token: clientLockToken })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    applyRemoteSeatStatus(data.sold, data.blocked);
+                }
+            }).catch(() => {});
+
+            // Sincronización en tiempo real cada 1.5 segundos entre ventanas
+            setInterval(syncSeatStatus, 1500);
+
             seats.forEach(seat => {
-                seat.addEventListener('click', () => {
+                seat.addEventListener('click', async () => {
                     const id = seat.getAttribute('data-id');
                     const zone = seat.getAttribute('data-zone');
                     const price = parseFloat(seat.getAttribute('data-price'));
 
-                    // Si está vendido o bloqueado, ignorar
-                    if (seat.classList.contains('sold') || seat.classList.contains('blocked')) {
+                    // Si está vendido o bloqueado por otro usuario, rechazar clic
+                    if (seat.classList.contains('sold')) {
+                        alert(`El asiento ${id} ya fue vendido.`);
+                        return;
+                    }
+                    if (seat.classList.contains('blocked')) {
+                        alert(`El asiento ${id} ya está siendo seleccionado por otra persona en este momento.`);
                         return;
                     }
 
@@ -696,41 +804,60 @@ try {
                     }
 
                     if (selectedSeats.has(id)) {
-                        // Deseleccionar
+                        // Deseleccionar y liberar en el servidor para que otros usuarios puedan tomarlo
                         selectedSeats.delete(id);
                         seat.classList.remove('selected');
+                        refreshZoneDisableState();
+                        updateSidebar();
+
+                        try {
+                            const res = await fetch('../php/seat_lock.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'unlock', event_id: eventId, seat_id: id, token: clientLockToken })
+                            });
+                            const data = await res.json();
+                            if (data.sold || data.blocked) {
+                                applyRemoteSeatStatus(data.sold, data.blocked);
+                            }
+                        } catch (e) {}
                     } else {
                         // Seleccionar (si no excede el límite)
                         if (selectedSeats.size >= maxSeats) {
                             alert(`Solo puedes elegir un máximo de ${maxSeats} boletos.`);
                             return;
                         }
-                        selectedSeats.set(id, { zone, price });
-                        seat.classList.add('selected');
-                    }
 
-                    // Controlar bloqueo visual de zonas cruzadas
-                    if (selectedSeats.size === 0) {
-                        lockedZone = null;
-                        document.querySelectorAll('.seat').forEach(s => {
-                            if (!s.classList.contains('blocked')) {
-                                s.classList.remove('disabled-zone');
-                            }
-                        });
-                    } else {
-                        lockedZone = zone;
-                        document.querySelectorAll('.seat').forEach(s => {
-                            if (s.getAttribute('data-zone') !== lockedZone) {
-                                s.classList.add('disabled-zone');
-                            } else {
-                                if (!s.classList.contains('blocked')) {
-                                    s.classList.remove('disabled-zone');
-                                }
-                            }
-                        });
-                    }
+                        // Bloquear inmediatamente en el servidor antes de confirmar la selección
+                        seat.style.pointerEvents = 'none';
+                        try {
+                            const res = await fetch('../php/seat_lock.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'lock', event_id: eventId, seat_id: id, token: clientLockToken })
+                            });
+                            const data = await res.json();
+                            seat.style.pointerEvents = '';
 
-                    updateSidebar();
+                            if (data.sold || data.blocked) {
+                                applyRemoteSeatStatus(data.sold, data.blocked);
+                            }
+
+                            if (!data.success) {
+                                alert(data.message || `El asiento ${id} acaba de ser ocupado por otro usuario.`);
+                                return;
+                            }
+
+                            selectedSeats.set(id, { zone, price });
+                            seat.classList.add('selected');
+                            lockedZone = zone;
+                            refreshZoneDisableState();
+                            updateSidebar();
+                        } catch (e) {
+                            seat.style.pointerEvents = '';
+                            alert('Error de conexión al verificar disponibilidad del asiento.');
+                        }
+                    }
                 });
             });
         });
@@ -775,31 +902,33 @@ try {
             btnReserve.disabled = (selectedSeats.size !== maxSeats);
         }
 
-        // Eliminar asiento individual
-        function removeSeat(id) {
+        // Eliminar asiento individual y desbloquearlo en tiempo real en el servidor
+        async function removeSeat(id) {
             if (selectedSeats.has(id)) {
                 selectedSeats.delete(id);
-                // Buscar el asiento correspondiente
                 const seatCircle = document.querySelector(`.seat[data-id="${id}"]`);
                 if (seatCircle) {
                     seatCircle.classList.remove('selected');
                 }
 
-                // Controlar desbloqueo si queda vacío
-                if (selectedSeats.size === 0) {
-                    lockedZone = null;
-                    document.querySelectorAll('.seat').forEach(s => {
-                        if (!s.classList.contains('blocked')) {
-                            s.classList.remove('disabled-zone');
-                        }
-                    });
-                }
-
+                refreshZoneDisableState();
                 updateSidebar();
+
+                try {
+                    const res = await fetch('../php/seat_lock.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'unlock', event_id: eventId, seat_id: id, token: clientLockToken })
+                    });
+                    const data = await res.json();
+                    if (data.sold || data.blocked) {
+                        applyRemoteSeatStatus(data.sold, data.blocked);
+                    }
+                } catch (e) {}
             }
         }
 
-        // Enviar la selección
+        // Enviar la selección pasando el token de bloqueo de esta ventana
         function submitSeatsSelection() {
             if (selectedSeats.size !== maxSeats) {
                 alert(`Por favor, selecciona exactamente ${maxSeats} asientos antes de continuar.`);
@@ -809,8 +938,8 @@ try {
             const chosenSeatIds = Array.from(selectedSeats.keys());
             const seatsStr = chosenSeatIds.join(', ');
 
-            // Redirigir a confirmar_reserva.php
-            window.location.href = `confirmar_reserva.php?event_id=<?php echo $event_id; ?>&espacios=${maxSeats}&asientos=${encodeURIComponent(seatsStr)}`;
+            // Redirigir a confirmar_reserva.php conservando el lock_token de esta ventana
+            window.location.href = `confirmar_reserva.php?event_id=<?php echo $event_id; ?>&espacios=${maxSeats}&asientos=${encodeURIComponent(seatsStr)}&lock_token=${encodeURIComponent(clientLockToken)}`;
         }
     </script>
 </body>

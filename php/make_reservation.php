@@ -23,6 +23,7 @@ $event_id = (int)($data['event_id'] ?? 0);
 $espacios = (int)($data['espacios'] ?? 0);
 $current_slots = (int)($data['current_slots'] ?? 0);
 $asientos_str = trim($data['asientos'] ?? '');
+$lock_token = trim($data['lock_token'] ?? '');
 $id_usuario = getCurrentUserId();
 
 if ($event_id <= 0 || $espacios <= 0) {
@@ -177,6 +178,26 @@ try {
             $fila = substr($seat, 0, 1);
             $numero = substr($seat, 1);
 
+            // F1: Verificar que el asiento no esté bloqueado temporalmente en selección por otra ventana/usuario
+            $stmtTempLock = $pdo->prepare("
+                SELECT token_ventana
+                FROM Bloqueo_Asiento
+                WHERE id_evento = ? AND codigo_asiento = ? AND fecha_expiracion >= NOW()
+                LIMIT 1 FOR UPDATE
+            ");
+            try {
+                $stmtTempLock->execute([$event_id, $seat]);
+                $tempLock = $stmtTempLock->fetch();
+                if ($tempLock && $lock_token !== '' && $tempLock['token_ventana'] !== $lock_token) {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        'success' => false,
+                        'message' => "El asiento $seat está siendo reservado por otra persona en este momento. Por favor, elige otro asiento."
+                    ]);
+                    exit;
+                }
+            } catch (\Exception $ignoreIfTableMissing) {}
+
             // F1: Bloquear asiento con FOR UPDATE y rechazar compra si ya fue ocupado por otro usuario
             $stmtCheck = $pdo->prepare("SELECT id_asiento, estado FROM Asiento WHERE id_zona = ? AND fila = ? AND numero = ? LIMIT 1 FOR UPDATE");
             $stmtCheck->execute([$id_zona, $fila, $numero]);
@@ -199,6 +220,12 @@ try {
                 $stmtInsertAsiento->execute([$id_zona, $fila, $numero]);
                 $id_asiento = $pdo->lastInsertId();
             }
+
+            // Liberar bloqueo temporal una vez concretada la compra definitiva
+            try {
+                $stmtDelLock = $pdo->prepare("DELETE FROM Bloqueo_Asiento WHERE id_evento = ? AND codigo_asiento = ?");
+                $stmtDelLock->execute([$event_id, $seat]);
+            } catch (\Exception $ignore) {}
 
             // Si hay un boleto generado disponible, vincularlo al asiento
             if (isset($boletos[$index])) {

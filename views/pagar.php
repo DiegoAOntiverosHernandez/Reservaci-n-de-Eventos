@@ -8,6 +8,7 @@ $event_id = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
 $espacios = isset($_GET['espacios']) ? (int)$_GET['espacios'] : 1;
 $current_slots = isset($_GET['current_slots']) ? (int)$_GET['current_slots'] : 0;
 $asientos_str = isset($_GET['asientos']) ? $_GET['asientos'] : '';
+$lock_token = isset($_GET['lock_token']) ? trim($_GET['lock_token']) : '';
 
 if ($event_id <= 0 || $espacios <= 0) {
     die('<h2>Error</h2><p>Parámetros inválidos.</p>');
@@ -306,12 +307,13 @@ try {
                 const originalText = btnPay.textContent;
                 btnPay.textContent = 'Procesando pago...';
 
-                // Enviar la petición a la base de datos local
+                // Enviar la petición a la base de datos incluyendo el token de bloqueo de esta ventana
                 const dataToSend = {
                     event_id: <?php echo $event_id; ?>,
                     espacios: <?php echo $espacios; ?>,
                     current_slots: <?php echo $current_slots; ?>,
-                    asientos: '<?php echo addslashes($asientos_str); ?>'
+                    asientos: '<?php echo addslashes($asientos_str); ?>',
+                    lock_token: '<?php echo addslashes($lock_token); ?>' || window.name || ''
                 };
 
                 try {
