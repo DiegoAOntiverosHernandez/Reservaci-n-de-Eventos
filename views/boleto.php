@@ -96,7 +96,8 @@ try {
     $fechaFormateada = "$diaLetra $diaNum $mesLetra, $horaFormateada";
 
 } catch (Exception $e) {
-    die('Error en el servidor: ' . $e->getMessage());
+    error_log('[Agora S1][boleto.php] Error: ' . $e->getMessage());
+    die('<h2>Error en el servidor</h2><p>No fue posible generar el boleto en este momento. Inténtalo más tarde.</p>');
 }
 ?>
 <!DOCTYPE html>

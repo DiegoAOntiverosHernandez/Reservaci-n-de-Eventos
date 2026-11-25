@@ -59,9 +59,10 @@ try {
     ]);
 
 } catch (\PDOException $e) {
+    error_log('[Agora S1][toggle_status.php] Error PDO: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al cambiar el estado del evento en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al cambiar el estado del evento.'
     ]);
 }
 ?>

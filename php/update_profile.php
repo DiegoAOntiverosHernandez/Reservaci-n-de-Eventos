@@ -70,9 +70,10 @@ try {
         'message' => 'Información de perfil actualizada exitosamente.'
     ]);
 } catch (\PDOException $e) {
+    error_log('[Agora S1][update_profile.php] Error PDO: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al actualizar el perfil en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al actualizar el perfil.'
     ]);
 }
 ?>

@@ -210,9 +210,10 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('[Agora S1][create_event.php] Error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al crear el evento en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al publicar el evento. Inténtalo nuevamente.'
     ]);
 }
 ?>

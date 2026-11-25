@@ -90,9 +90,10 @@ try {
     ]);
 
 } catch (\PDOException $e) {
+    error_log('[Agora S1][cancel_reservation.php] Error PDO: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al cancelar la reservación en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al cancelar la reservación. Inténtalo nuevamente.'
     ]);
 }
 ?>

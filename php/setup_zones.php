@@ -101,9 +101,10 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('[Agora S1][setup_zones.php] Error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al configurar el recinto en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al configurar el recinto. Inténtalo nuevamente.'
     ]);
 }
 ?>

@@ -64,9 +64,10 @@ try {
     ]);
 
 } catch (\PDOException $e) {
+    error_log('[Agora S1][delete_event.php] Error PDO: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al intentar eliminar el evento en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al eliminar el evento. Inténtalo nuevamente.'
     ]);
 }
 ?>

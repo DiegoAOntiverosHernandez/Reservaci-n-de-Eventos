@@ -214,9 +214,10 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('[Agora S1][make_reservation.php] Error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al registrar la reservación en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al procesar la reservación. Inténtalo nuevamente.'
     ]);
 }
 ?>

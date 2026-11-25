@@ -66,9 +66,10 @@ try {
         'message' => '¡Cuenta creada exitosamente! Ahora puedes iniciar sesión.'
     ]);
 } catch (\PDOException $e) {
+    error_log('[Agora S1][register.php] Error PDO: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al guardar el usuario en el servidor: ' . $e->getMessage()
+        'message' => 'Error interno en el servidor al registrar la cuenta. Inténtalo de nuevo más tarde.'
     ]);
 }
 ?>

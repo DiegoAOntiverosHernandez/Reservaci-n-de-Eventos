@@ -80,9 +80,10 @@ try {
     ]);
 
 } catch (\Exception $e) {
+    error_log('[Agora S1][delete_incident.php] Error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al intentar eliminar la incidencia en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al eliminar la incidencia.'
     ]);
 }
 ?>

@@ -63,9 +63,10 @@ try {
         ]);
     }
 } catch (\PDOException $e) {
+    error_log('[Agora S1][login.php] Error PDO: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error en el servidor al intentar iniciar sesión: ' . $e->getMessage()
+        'message' => 'Error interno en el servidor al procesar el inicio de sesión. Inténtalo de nuevo más tarde.'
     ]);
 }
 ?>

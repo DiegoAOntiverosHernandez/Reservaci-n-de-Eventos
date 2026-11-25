@@ -58,9 +58,10 @@ try {
     ]);
 
 } catch (\Exception $e) {
+    error_log('[Agora S1][report_incident.php] Error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al registrar la incidencia en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al registrar la incidencia.'
     ]);
 }
 ?>

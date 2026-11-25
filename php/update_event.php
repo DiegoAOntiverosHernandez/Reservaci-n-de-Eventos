@@ -272,9 +272,10 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('[Agora S1][update_event.php] Error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error al actualizar el evento en el servidor: ' . $e->getMessage()
+        'message' => 'Ocurrió un error interno al actualizar el evento. Inténtalo nuevamente.'
     ]);
 }
 ?>
