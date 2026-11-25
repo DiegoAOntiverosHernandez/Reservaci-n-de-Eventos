@@ -7,26 +7,28 @@ requireLogin();
 $id_usuario = getCurrentUserId();
 
 try {
-    // Obtener todos los eventos para el calendario
+    // Obtener todos los eventos para el calendario sumando todas sus zonas en Zona_Boleto
     $stmt = $pdo->prepare("
         SELECT e.id_evento, e.nombre_evento, e.fecha, e.hora_inicio, e.estado,
                c.nombre_categoria,
-               COALESCE(z.id_zona, 0) AS id_zona,
-               COALESCE(z.lugares_totales, e.capacidad_total) AS cap_total,
-               COALESCE(z.lugares_disponibles, 0) AS cap_disponible,
+               COALESCE(SUM(z.lugares_totales), e.capacidad_total) AS cap_total,
+               COALESCE(SUM(z.lugares_disponibles), e.capacidad_total) AS cap_disponible,
                COALESCE((
-                   SELECT SUM(r.espacios_reservados) 
-                   FROM Reservacion r 
-                   WHERE r.id_zona = z.id_zona AND r.estado_reservacion = 'Confirmado'
+                   SELECT SUM(r.espacios_reservados)
+                   FROM Reservacion r
+                   JOIN Zona_Boleto zb ON r.id_zona = zb.id_zona
+                   WHERE zb.id_evento = e.id_evento AND r.estado_reservacion = 'Confirmado'
                ), 0) AS total_asistentes,
                COALESCE((
-                   SELECT SUM(r.espacios_reservados) 
-                   FROM Reservacion r 
-                   WHERE r.id_usuario = ? AND r.id_zona = z.id_zona AND r.estado_reservacion = 'Confirmado'
+                   SELECT SUM(r.espacios_reservados)
+                   FROM Reservacion r
+                   JOIN Zona_Boleto zb ON r.id_zona = zb.id_zona
+                   WHERE r.id_usuario = ? AND zb.id_evento = e.id_evento AND r.estado_reservacion = 'Confirmado'
                ), 0) AS mi_reserva
         FROM Evento e
         LEFT JOIN Categoria c ON e.id_categoria = c.id_categoria
-        LEFT JOIN Zona_Boleto z ON e.id_evento = z.id_evento AND z.nombre_zona = 'General'
+        LEFT JOIN Zona_Boleto z ON e.id_evento = z.id_evento
+        GROUP BY e.id_evento, c.nombre_categoria
         ORDER BY e.fecha ASC
     ");
     $stmt->execute([$id_usuario]);

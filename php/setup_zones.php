@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/event_helpers.php';
 
 // Exigir inicio de sesión
 requireLogin();
@@ -46,25 +47,16 @@ try {
     $stmtDel = $pdo->prepare("DELETE FROM Zona_Boleto WHERE id_evento = ?");
     $stmtDel->execute([$event_id]);
 
-    // Distribuir capacidad de forma equitativa y exacta entre las 5 zonas
-    // VIP: 15%, Zona A: 20%, Zona B: 30%, Zona C: 20%, Zona D: 15%
-    $seatsVIP = max(1, (int)round($capacidad * 0.15));
-    $seatsA = max(1, (int)round($capacidad * 0.20));
-    $seatsB = max(1, (int)round($capacidad * 0.30));
-    $seatsC = max(1, (int)round($capacidad * 0.20));
-    $seatsD = $capacidad - ($seatsVIP + $seatsA + $seatsB + $seatsC);
-    
-    if ($seatsD <= 0) {
-        $seatsD = 1;
+    // M1: Distribuir capacidad de forma equitativa y exacta entre las 5 zonas mediante función compartida
+    $dist = calculateFiveZonesDistribution($capacidad);
+    $zonas = [];
+    foreach ($dist as $zNombre => $zCupos) {
+        $zonas[] = [
+            'nombre' => $zNombre,
+            'precio' => (float)($precios[$zNombre] ?? 0),
+            'cupos'  => $zCupos
+        ];
     }
-
-    $zonas = [
-        ['nombre' => 'VIP', 'precio' => (float)($precios['VIP'] ?? 0), 'cupos' => $seatsVIP],
-        ['nombre' => 'Zona A', 'precio' => (float)($precios['Zona A'] ?? 0), 'cupos' => $seatsA],
-        ['nombre' => 'Zona B', 'precio' => (float)($precios['Zona B'] ?? 0), 'cupos' => $seatsB],
-        ['nombre' => 'Zona C', 'precio' => (float)($precios['Zona C'] ?? 0), 'cupos' => $seatsC],
-        ['nombre' => 'Zona D', 'precio' => (float)($precios['Zona D'] ?? 0), 'cupos' => $seatsD]
-    ];
 
     $stmtInsert = $pdo->prepare("
         INSERT INTO Zona_Boleto (id_evento, nombre_zona, precio, lugares_totales, lugares_disponibles)

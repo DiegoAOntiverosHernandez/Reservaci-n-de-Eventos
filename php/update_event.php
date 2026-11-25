@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/event_helpers.php';
 
 // Exigir inicio de sesión
 requireLogin();
@@ -85,46 +86,10 @@ try {
         exit;
     }
 
-    // 2. Mapear categoría a base de datos
-    $catName = '';
-    $lowerCat = strtolower($categoria);
-    if (strpos($lowerCat, 'concierto') !== false) {
-        $catName = 'Concierto';
-    } elseif (strpos($lowerCat, 'teatro') !== false || strpos($lowerCat, 'obra') !== false || strpos($lowerCat, 'arte') !== false) {
-        $catName = 'Obra de teatro';
-    } elseif (strpos($lowerCat, 'conferencia') !== false) {
-        $catName = 'Conferencia';
-    } elseif (strpos($lowerCat, 'festival') !== false) {
-        $catName = 'Festival';
-    } elseif (strpos($lowerCat, 'social') !== false || strpos($lowerCat, 'boda') !== false || strpos($lowerCat, 'salon') !== false || strpos($lowerCat, 'salón') !== false) {
-        $catName = 'Evento social';
-    } elseif (strpos($lowerCat, 'deporte') !== false || strpos($lowerCat, 'deportivo') !== false) {
-        $catName = 'Evento deportivo';
-    } else {
-        $catName = ucfirst($lowerCat);
-    }
-
-    $stmt = $pdo->prepare("SELECT id_categoria FROM Categoria WHERE nombre_categoria = ?");
-    $stmt->execute([$catName]);
-    $row = $stmt->fetch();
-    if ($row) {
-        $id_categoria = $row['id_categoria'];
-    } else {
-        $stmt = $pdo->prepare("INSERT INTO Categoria (nombre_categoria) VALUES (?)");
-        $stmt->execute([$catName]);
-        $id_categoria = $pdo->lastInsertId();
-    }
-
-    // Asignar Recinto dinámicamente según la categoría
-    $id_recinto = 4; // Plaza Pública (General) por defecto
-    $lowerCat = strtolower($categoria);
-    if (strpos($lowerCat, 'concierto') !== false || strpos($lowerCat, 'deporte') !== false || strpos($lowerCat, 'deportivo') !== false) {
-        $id_recinto = 2; // Estadio Olímpico Ágora (estadio)
-    } elseif (strpos($lowerCat, 'teatro') !== false || strpos($lowerCat, 'obra') !== false || strpos($lowerCat, 'arte') !== false) {
-        $id_recinto = 1; // Teatro Ágora Principal (teatro)
-    } elseif (strpos($lowerCat, 'conferencia') !== false) {
-        $id_recinto = 3; // Sala de Conferencias Ágora (conferencia)
-    }
+    // 2. M1: Resolver categoría y recinto desde el módulo compartido
+    $resolved     = resolveEventCategoryAndVenue($pdo, $categoria);
+    $id_categoria = $resolved['id_categoria'];
+    $id_recinto   = $resolved['id_recinto'];
 
     // Calcular hora de cierre
     if (!empty($hora_cierre_req)) {
@@ -134,62 +99,15 @@ try {
         $hora_cierre = date('H:i:s', $time + 3 * 3600);
     }
 
-    // S2: Subida de imágenes controlada (validar tipo MIME real, límite de 5 MB y permisos 0755)
+    // S2 + M1: Subida de imágenes controlada mediante función compartida
     $imagen_banner = null;
     if (!empty($imagen_base64)) {
-        $parts = explode(',', $imagen_base64, 2);
-        $imgData = isset($parts[1]) ? base64_decode($parts[1], true) : false;
-
-        if ($imgData === false) {
-            echo json_encode(['success' => false, 'message' => 'Archivo de imagen inválido o corrupto.']);
+        try {
+            $imagen_banner = validateAndSaveEventImage($imagen_base64);
+        } catch (\InvalidArgumentException $imgEx) {
+            echo json_encode(['success' => false, 'message' => $imgEx->getMessage()]);
             exit;
         }
-
-        // Límite estricto de 5 MB (5 * 1024 * 1024 bytes)
-        $maxSizeBytes = 5 * 1024 * 1024;
-        if (strlen($imgData) > $maxSizeBytes) {
-            echo json_encode(['success' => false, 'message' => 'La imagen excede el tamaño máximo permitido de 5 MB.']);
-            exit;
-        }
-
-        // Verificar el contenido binario real del archivo (evita archivos .php renombrados como imagen)
-        $realMime = '';
-        if (class_exists('finfo')) {
-            $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            $realMime = $finfo->buffer($imgData);
-        }
-        $imgInfo = @getimagesizefromstring($imgData);
-        if (empty($realMime) && $imgInfo && isset($imgInfo['mime'])) {
-            $realMime = $imgInfo['mime'];
-        }
-
-        $allowedMimes = [
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/webp' => 'webp'
-        ];
-
-        if (!$imgInfo || !isset($allowedMimes[$realMime]) || strpos($imgData, '<?php') !== false) {
-            echo json_encode(['success' => false, 'message' => 'Tipo de archivo no permitido. Solo se aceptan imágenes reales (JPG, PNG, WEBP) de máximo 5 MB.']);
-            exit;
-        }
-
-        $uploadDir = __DIR__ . '/../Assets/img/uploads/';
-        if (!file_exists($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        } else {
-            @chmod($uploadDir, 0755);
-        }
-
-        $ext = $allowedMimes[$realMime];
-        $fileName = 'event_' . bin2hex(random_bytes(8)) . '.' . $ext;
-        $fullPath = $uploadDir . $fileName;
-        if (file_put_contents($fullPath, $imgData) === false) {
-            echo json_encode(['success' => false, 'message' => 'No se pudo almacenar la imagen del evento.']);
-            exit;
-        }
-        @chmod($fullPath, 0644);
-        $imagen_banner = 'Assets/img/uploads/' . $fileName;
     }
 
     // Iniciar transacción de base de datos
@@ -233,23 +151,8 @@ try {
     $hasZones = ((int)$stmtCheck->fetchColumn() > 0);
 
     if ($hasZones) {
-        // Redistribuir la nueva capacidad de forma proporcional entre las 5 zonas
-        $seatsVIP = max(1, (int)round($capacidad * 0.15));
-        $seatsA = max(1, (int)round($capacidad * 0.20));
-        $seatsB = max(1, (int)round($capacidad * 0.30));
-        $seatsC = max(1, (int)round($capacidad * 0.20));
-        $seatsD = $capacidad - ($seatsVIP + $seatsA + $seatsB + $seatsC);
-        if ($seatsD <= 0) {
-            $seatsD = 1;
-        }
-
-        $newSeats = [
-            'VIP' => $seatsVIP,
-            'Zona A' => $seatsA,
-            'Zona B' => $seatsB,
-            'Zona C' => $seatsC,
-            'Zona D' => $seatsD
-        ];
+        // M1: Redistribuir la nueva capacidad entre las 5 zonas usando la función compartida
+        $newSeats = calculateFiveZonesDistribution($capacidad);
 
         // Actualizar cada zona manteniendo el precio anterior
         foreach ($newSeats as $zName => $zTotales) {
