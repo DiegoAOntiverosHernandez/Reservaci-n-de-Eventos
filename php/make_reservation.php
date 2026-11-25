@@ -105,8 +105,8 @@ try {
         }
     }
 
-    // 3. Volver a consultar la zona para verificar stock disponible (luego de la potencial restauración)
-    $stmtStock = $pdo->prepare("SELECT lugares_disponibles FROM Zona_Boleto WHERE id_zona = ?");
+    // 3. F1: Bloquear la fila de la zona (FOR UPDATE) para verificar stock disponible sin condición de carrera
+    $stmtStock = $pdo->prepare("SELECT lugares_disponibles FROM Zona_Boleto WHERE id_zona = ? FOR UPDATE");
     $stmtStock->execute([$id_zona]);
     $zonaActualizada = $stmtStock->fetch();
     $disponibles = (int)$zonaActualizada['lugares_disponibles'];
@@ -177,12 +177,20 @@ try {
             $fila = substr($seat, 0, 1);
             $numero = substr($seat, 1);
 
-            // Buscar si el asiento ya existe
-            $stmtCheck = $pdo->prepare("SELECT id_asiento FROM Asiento WHERE id_zona = ? AND fila = ? AND numero = ? LIMIT 1");
+            // F1: Bloquear asiento con FOR UPDATE y rechazar compra si ya fue ocupado por otro usuario
+            $stmtCheck = $pdo->prepare("SELECT id_asiento, estado FROM Asiento WHERE id_zona = ? AND fila = ? AND numero = ? LIMIT 1 FOR UPDATE");
             $stmtCheck->execute([$id_zona, $fila, $numero]);
             $asiento = $stmtCheck->fetch();
 
             if ($asiento) {
+                if ($asiento['estado'] === 'ocupado' || $asiento['estado'] === 'reservado') {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        'success' => false,
+                        'message' => "El asiento $seat ya fue ocupado por otra persona. Por favor, elige otro asiento disponible."
+                    ]);
+                    exit;
+                }
                 $id_asiento = $asiento['id_asiento'];
                 $stmtUpdateAsiento = $pdo->prepare("UPDATE Asiento SET estado = 'ocupado' WHERE id_asiento = ?");
                 $stmtUpdateAsiento->execute([$id_asiento]);
