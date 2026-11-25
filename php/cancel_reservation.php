@@ -48,11 +48,11 @@ try {
 
     $id_reservacion = $res['id_reservacion'];
 
-    // Iniciar transacción de base de datos para consistencia
+    // F2: Iniciar transacción atómica con bloqueo de fila (FOR UPDATE) y rollback completo ante cualquier fallo
     $pdo->beginTransaction();
 
-    // Obtener los datos de la reservación (zona y cantidad de espacios)
-    $stmtResOld = $pdo->prepare("SELECT id_zona, espacios_reservados FROM Reservacion WHERE id_reservacion = ?");
+    // Obtener y bloquear los datos de la reservación (zona y cantidad de espacios)
+    $stmtResOld = $pdo->prepare("SELECT id_zona, espacios_reservados FROM Reservacion WHERE id_reservacion = ? AND estado_reservacion = 'Confirmado' FOR UPDATE");
     $stmtResOld->execute([$id_reservacion]);
     $resOld = $stmtResOld->fetch();
 
@@ -99,8 +99,12 @@ try {
         'message' => 'Reservación cancelada exitosamente y cupos liberados.'
     ]);
 
-} catch (\PDOException $e) {
-    error_log('[Agora S1][cancel_reservation.php] Error PDO: ' . $e->getMessage());
+} catch (\Exception $e) {
+    // F2: Revertir todos los cambios parciales si ocurre cualquier fallo durante la cancelación
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    error_log('[Agora S1/F2][cancel_reservation.php] Error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
         'message' => 'Ocurrió un error interno al cancelar la reservación. Inténtalo nuevamente.'
