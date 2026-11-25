@@ -1,0 +1,5 @@
+# S4: Excluir archivos de configuración con credenciales y archivos temporales (ISO 27001 A.10)
+php/config.env.php
+.env
+*.log
+database_hosting.sql

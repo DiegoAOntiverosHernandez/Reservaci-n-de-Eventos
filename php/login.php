@@ -40,6 +40,9 @@ try {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['contrasena'])) {
+        // S4 (ISO/IEC 27001 A.9): Regenerar el identificador de sesión para prevenir fijación de sesión
+        session_regenerate_id(true);
+
         // Inicializar variables de sesión seguras
         $_SESSION['usuario_id']     = $user['id_usuario'];
         $_SESSION['usuario_nombre'] = $user['nombre'];
