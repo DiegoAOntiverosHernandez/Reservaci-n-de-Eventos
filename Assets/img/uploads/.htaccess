@@ -1,0 +1,5 @@
+# S2: Restringir ejecución de scripts en la carpeta de subidas (ISO 27001 A.14)
+Options -Indexes -ExecCGI
+<FilesMatch "\.(php|php[0-9]|phtml|phar|pl|py|jsp|asp|htm|html|sh|cgi)$">
+    Require all denied
+</FilesMatch>

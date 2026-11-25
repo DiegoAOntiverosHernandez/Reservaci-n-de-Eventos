@@ -134,22 +134,62 @@ try {
         $hora_cierre = date('H:i:s', $time + 3 * 3600);
     }
 
-    // Si hay una imagen en base64 cargada, la guardamos
+    // S2: Subida de imágenes controlada (validar tipo MIME real, límite de 5 MB y permisos 0755)
     $imagen_banner = null;
-    if (!empty($imagen_base64) && strpos($imagen_base64, 'data:image') === 0) {
-        try {
-            $parts = explode(',', $imagen_base64);
-            $imgData = base64_decode($parts[1]);
-            $uploadDir = __DIR__ . '/../Assets/img/uploads/';
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
-            $fileName = 'event_' . uniqid() . '.png';
-            file_put_contents($uploadDir . $fileName, $imgData);
-            $imagen_banner = 'Assets/img/uploads/' . $fileName;
-        } catch (\Exception $exImg) {
-            // Ignorar
+    if (!empty($imagen_base64)) {
+        $parts = explode(',', $imagen_base64, 2);
+        $imgData = isset($parts[1]) ? base64_decode($parts[1], true) : false;
+
+        if ($imgData === false) {
+            echo json_encode(['success' => false, 'message' => 'Archivo de imagen inválido o corrupto.']);
+            exit;
         }
+
+        // Límite estricto de 5 MB (5 * 1024 * 1024 bytes)
+        $maxSizeBytes = 5 * 1024 * 1024;
+        if (strlen($imgData) > $maxSizeBytes) {
+            echo json_encode(['success' => false, 'message' => 'La imagen excede el tamaño máximo permitido de 5 MB.']);
+            exit;
+        }
+
+        // Verificar el contenido binario real del archivo (evita archivos .php renombrados como imagen)
+        $realMime = '';
+        if (class_exists('finfo')) {
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $realMime = $finfo->buffer($imgData);
+        }
+        $imgInfo = @getimagesizefromstring($imgData);
+        if (empty($realMime) && $imgInfo && isset($imgInfo['mime'])) {
+            $realMime = $imgInfo['mime'];
+        }
+
+        $allowedMimes = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp'
+        ];
+
+        if (!$imgInfo || !isset($allowedMimes[$realMime]) || strpos($imgData, '<?php') !== false) {
+            echo json_encode(['success' => false, 'message' => 'Tipo de archivo no permitido. Solo se aceptan imágenes reales (JPG, PNG, WEBP) de máximo 5 MB.']);
+            exit;
+        }
+
+        $uploadDir = __DIR__ . '/../Assets/img/uploads/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        } else {
+            @chmod($uploadDir, 0755);
+        }
+
+        $ext = $allowedMimes[$realMime];
+        $fileName = 'event_' . bin2hex(random_bytes(8)) . '.' . $ext;
+        $fullPath = $uploadDir . $fileName;
+        if (file_put_contents($fullPath, $imgData) === false) {
+            echo json_encode(['success' => false, 'message' => 'No se pudo almacenar la imagen del evento.']);
+            exit;
+        }
+        @chmod($fullPath, 0644);
+        $imagen_banner = 'Assets/img/uploads/' . $fileName;
     }
 
     // Iniciar transacción de base de datos
