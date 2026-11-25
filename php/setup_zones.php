@@ -90,6 +90,17 @@ try {
     $stmtUpdateCap = $pdo->prepare("UPDATE Evento SET capacidad_total = ? WHERE id_evento = ?");
     $stmtUpdateCap->execute([$total_cap, $event_id]);
 
+    // S3: Registrar configuración de zonas del recinto en la Bitácora de Auditoría
+    $id_organizador = getCurrentUserId();
+    $stmtBitacora = $pdo->prepare("
+        INSERT INTO Bitacora (accion, detalle, id_evento_afectado)
+        VALUES ('CONFIGURACION_ZONAS', ?, ?)
+    ");
+    $stmtBitacora->execute([
+        "Organizador ID $id_organizador configuró las 5 zonas del recinto (capacidad total: $total_cap)",
+        $event_id
+    ]);
+
     $pdo->commit();
 
     echo json_encode([

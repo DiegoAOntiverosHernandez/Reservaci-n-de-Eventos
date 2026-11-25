@@ -201,6 +201,18 @@ try {
         }
     }
 
+    // S3: Registrar creación/actualización de reservación en la Bitácora de Auditoría
+    $accionBitacora = $current_slots > 0 ? 'ACTUALIZACION_RESERVACION' : 'CREACION_RESERVACION';
+    $stmtBitacora = $pdo->prepare("
+        INSERT INTO Bitacora (accion, detalle, id_evento_afectado)
+        VALUES (?, ?, ?)
+    ");
+    $stmtBitacora->execute([
+        $accionBitacora,
+        "Usuario ID $id_usuario reservó $espacios lugar(es) en zona '$nombre_zona' (Reservación ID $id_reservacion, Asientos: " . ($asientos_str ?: 'General') . ")",
+        $event_id
+    ]);
+
     $pdo->commit();
 
     $message = $current_slots > 0 ? '¡Tu reservación ha sido actualizada con éxito!' : '¡Reservación realizada con éxito!';

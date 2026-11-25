@@ -237,6 +237,16 @@ try {
         $_SESSION['usuario_rol'] = 'organizador';
     }
 
+    // S3: Registrar creación de evento en la Bitácora de Auditoría
+    $stmtBitacora = $pdo->prepare("
+        INSERT INTO Bitacora (accion, detalle, id_evento_afectado)
+        VALUES ('CREACION_EVENTO', ?, ?)
+    ");
+    $stmtBitacora->execute([
+        "Organizador ID $id_organizador publicó el evento '$nombre' (Categoría ID $id_categoria, Recinto ID $id_recinto)",
+        $id_evento
+    ]);
+
     $pdo->commit();
 
     echo json_encode([

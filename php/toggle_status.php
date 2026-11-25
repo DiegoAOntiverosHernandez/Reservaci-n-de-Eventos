@@ -53,6 +53,16 @@ try {
     $stmt = $pdo->prepare("UPDATE Evento SET estado = ? WHERE id_evento = ?");
     $stmt->execute([$status, $event_id]);
 
+    // S3: Registrar cambio de estado del evento en la Bitácora de Auditoría
+    $stmtBitacora = $pdo->prepare("
+        INSERT INTO Bitacora (accion, detalle, id_evento_afectado)
+        VALUES ('CAMBIO_ESTADO_EVENTO', ?, ?)
+    ");
+    $stmtBitacora->execute([
+        "Organizador ID $id_organizador cambió el estado del evento ID $event_id a '$status'",
+        $event_id
+    ]);
+
     echo json_encode([
         'success' => true,
         'message' => 'El estado del evento ha sido cambiado a ' . $status . ' exitosamente.'

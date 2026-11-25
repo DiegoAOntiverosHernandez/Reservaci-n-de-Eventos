@@ -58,6 +58,16 @@ try {
     $stmt = $pdo->prepare("DELETE FROM Evento WHERE id_evento = ?");
     $stmt->execute([$event_id]);
 
+    // S3: Registrar eliminación de evento en la Bitácora de Auditoría
+    $stmtBitacora = $pdo->prepare("
+        INSERT INTO Bitacora (accion, detalle, id_evento_afectado)
+        VALUES ('ELIMINACION_EVENTO', ?, ?)
+    ");
+    $stmtBitacora->execute([
+        "Organizador ID $id_organizador eliminó permanentemente el evento ID $event_id",
+        $event_id
+    ]);
+
     echo json_encode([
         'success' => true,
         'message' => 'El evento ha sido eliminado exitosamente.'

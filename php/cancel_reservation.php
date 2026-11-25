@@ -80,6 +80,16 @@ try {
         // c. Devolver los asientos reservados al stock disponible en Zona_Boleto
         $stmtInc = $pdo->prepare("UPDATE Zona_Boleto SET lugares_disponibles = lugares_disponibles + ? WHERE id_zona = ?");
         $stmtInc->execute([$resOld['espacios_reservados'], $resOld['id_zona']]);
+
+        // S3: Registrar cancelación de reservación en la Bitácora de Auditoría
+        $stmtBitacora = $pdo->prepare("
+            INSERT INTO Bitacora (accion, detalle, id_evento_afectado)
+            VALUES ('CANCELACION_RESERVACION', ?, ?)
+        ");
+        $stmtBitacora->execute([
+            "Usuario ID $id_usuario canceló la reservación ID $id_reservacion liberando {$resOld['espacios_reservados']} espacio(s)",
+            $event_id
+        ]);
     }
 
     $pdo->commit();
